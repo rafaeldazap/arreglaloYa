@@ -1,0 +1,21 @@
+.encabezado { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+.encabezado h1 { margin: 0; }
+.pedido { margin-bottom: 16px; }
+.fila { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
+.pedido h3 { margin: 8px 0 4px; }
+.estado { padding: 4px 12px; border-radius: 999px; font-size: .85rem; font-weight: 600; white-space: nowrap; background: var(--azul-claro); color: var(--azul); }
+.estado.PENDIENTE { background: #fff4e5; color: #b26a00; }
+.estado.EN_PROCESO { background: #e7f0ff; color: #1d4ed8; }
+.estado.FINALIZADO { background: #e6f6f3; color: #1d6b61; }
+.estado.CANCELADO, .estado.FUERA_DE_TIEMPO { background: #fdecec; color: var(--rojo); }
+.pasos { display: flex; justify-content: space-between; margin: 18px 0 12px; position: relative; }
+.pasos::before { content: ''; position: absolute; top: 7px; left: 8px; right: 8px; height: 2px; background: var(--borde); }
+.paso { position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: .85rem; color: var(--gris); flex: 1; }
+.punto { width: 16px; height: 16px; border-radius: 50%; background: #fff; border: 2px solid var(--borde); z-index: 1; }
+.paso.hecho { color: var(--azul); font-weight: 600; }
+.paso.hecho .punto { background: var(--verde); border-color: var(--verde); }
+details { margin: 8px 0 12px; }
+summary { cursor: pointer; color: var(--azul); font-weight: 600; }
+.historial { padding-left: 18px; }
+.historial li { margin: 6px 0; }
+.historial small { color: var(--gris); margin-right: 6px; }

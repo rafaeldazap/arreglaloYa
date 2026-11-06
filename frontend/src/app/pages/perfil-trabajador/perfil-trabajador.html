@@ -1,0 +1,49 @@
+<div class="contenedor">
+  @if (trabajador; as t) {
+    <a routerLink="/buscar">← Volver a la búsqueda</a>
+    <div class="perfil">
+      <div class="tarjeta">
+        <div class="cabecera">
+          <div class="avatar">{{ t.nombre.charAt(0) }}</div>
+          <div>
+            <h1>{{ t.nombre }}</h1>
+            <p><span class="estrellas">{{ estrellas(t.promedio) }}</span> {{ t.promedio }} · {{ t.trabajosRealizados }} trabajos realizados</p>
+            <span class="verificado">✓ Identidad y documentos revisados</span>
+          </div>
+        </div>
+        <h3>Experiencia</h3>
+        <p>{{ t.experiencia }}</p>
+        <h3>Especialidades</h3>
+        @for (e of t.especialidades; track e) {
+          <span class="etiqueta">{{ e }}</span>
+        }
+        <h3>Zonas donde atiende</h3>
+        @for (z of t.zonas; track z) {
+          <span class="etiqueta">{{ z }}</span>
+        }
+      </div>
+
+      <div class="lateral">
+        <div class="tarjeta">
+          <h3>¿Necesitas a {{ t.nombre.split(' ')[0] }}?</h3>
+          <p class="ayuda">Publica tu pedido y recibe su cotización. Tu dirección exacta solo se comparte cuando aceptas la cotización.</p>
+          <a class="btn btn-bloque" routerLink="/nueva-solicitud" [queryParams]="{ trabajador: t.id }">Solicitar servicio</a>
+        </div>
+        <div class="tarjeta">
+          <h3>Opiniones ({{ t.opiniones.length }})</h3>
+          @for (o of t.opiniones; track $index) {
+            <div class="opinion">
+              <b>{{ o.cliente }}</b> <span class="estrellas">{{ estrellas(o.puntaje) }}</span>
+              <p>{{ o.comentario }}</p>
+              <small>{{ o.fecha }}</small>
+            </div>
+          } @empty {
+            <p class="ayuda">Todavía no tiene opiniones.</p>
+          }
+        </div>
+      </div>
+    </div>
+  } @else {
+    <p>No se encontró al trabajador.</p>
+  }
+</div>

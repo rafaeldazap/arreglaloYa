@@ -1,0 +1,6 @@
+.selector-rol { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 6px; }
+.selector-rol button { padding: 10px; border: 1px solid var(--borde); border-radius: 8px; background: #fff; cursor: pointer; font-weight: 600; color: var(--gris); }
+.selector-rol button.activo { border-color: var(--naranja-fuerte); color: var(--naranja-fuerte); background: #fff5ef; }
+.opciones { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 12px; }
+.opcion { font-weight: 400; margin: 4px 0; display: flex; align-items: center; gap: 8px; }
+.opcion input { width: auto; }

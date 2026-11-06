@@ -1,0 +1,24 @@
+<header class="barra">
+  <div class="barra-contenido">
+    <a routerLink="/" class="logo">Arréglalo <span>Ya</span></a>
+    <button class="menu-btn" (click)="menuAbierto = !menuAbierto" aria-label="Menú">☰</button>
+    <nav [class.abierto]="menuAbierto" (click)="menuAbierto = false">
+      <a routerLink="/buscar" routerLinkActive="activo">Buscar trabajadores</a>
+      @if (auth.usuario(); as u) {
+        <a routerLink="/nueva-solicitud" routerLinkActive="activo">Nueva solicitud</a>
+        <a routerLink="/mis-pedidos" routerLinkActive="activo">Mis pedidos</a>
+        <span class="saludo">Hola, {{ u.nombre }}</span>
+        <button class="btn btn-borde" (click)="salir()">Salir</button>
+      } @else {
+        <a routerLink="/login" routerLinkActive="activo">Iniciar sesión</a>
+        <a routerLink="/registro" class="btn">Registrarse</a>
+      }
+    </nav>
+  </div>
+</header>
+
+<main>
+  <router-outlet />
+</main>
+
+<footer class="pie">Arréglalo Ya · Cochabamba, Bolivia · Proyecto de Sistemas de Información I</footer>

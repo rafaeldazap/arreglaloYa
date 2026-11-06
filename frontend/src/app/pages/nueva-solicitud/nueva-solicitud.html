@@ -1,0 +1,65 @@
+<div class="contenedor formulario">
+  <h1>Nueva solicitud</h1>
+
+  @if (!auth.usuario()) {
+    <div class="tarjeta">
+      Para publicar un pedido primero debes <a routerLink="/login">iniciar sesión</a> o <a routerLink="/registro">crear una cuenta</a>.
+    </div>
+  } @else {
+    <form class="tarjeta" (ngSubmit)="publicar()">
+      @if (trabajador) {
+        <p class="ok">Se enviará la solicitud a <b>{{ trabajador }}</b>.</p>
+      }
+
+      <label for="categoria">¿Qué tipo de trabajo necesitas?</label>
+      <select id="categoria" name="categoria" [(ngModel)]="categoria">
+        <option value="">Elige una categoría</option>
+        @for (c of datos.categorias; track c) {
+          <option [value]="c">{{ c }}</option>
+        }
+      </select>
+
+      <label for="descripcion">Describe el problema</label>
+      <textarea id="descripcion" name="descripcion" rows="4" [(ngModel)]="descripcion" placeholder="Ej.: El grifo de la cocina gotea y hay humedad debajo del lavaplatos."></textarea>
+
+      <label for="fotos">Fotos del lugar (1 a 5)</label>
+      <input id="fotos" type="file" accept="image/*" multiple (change)="cargarFotos($event)" />
+      <div class="fotos">
+        @for (f of fotos; track $index) {
+          <div class="foto">
+            <img [src]="f" alt="Foto del problema" />
+            <button type="button" (click)="quitarFoto($index)">✕</button>
+          </div>
+        }
+      </div>
+
+      <div class="dos-columnas">
+        <div>
+          <label for="zona">Zona</label>
+          <select id="zona" name="zona" [(ngModel)]="zona">
+            <option value="">Elige tu zona</option>
+            @for (z of datos.zonas; track z) {
+              <option [value]="z">{{ z }}</option>
+            }
+          </select>
+        </div>
+        <div>
+          <label for="fecha">¿Cuándo?</label>
+          <input id="fecha" name="fecha" type="date" [(ngModel)]="fecha" />
+        </div>
+      </div>
+
+      <label for="direccion">Dirección exacta</label>
+      <input id="direccion" name="direccion" [(ngModel)]="direccion" />
+      <p class="ayuda">Solo la verá el trabajador cuya cotización aceptes.</p>
+
+      <label for="monto">¿Cuánto puedes pagar? (Bs, opcional)</label>
+      <input id="monto" name="monto" type="number" min="0" [(ngModel)]="montoOfrecido" />
+
+      @if (error) {
+        <p class="error">{{ error }}</p>
+      }
+      <button class="btn btn-bloque" type="submit" style="margin-top: 18px">Publicar solicitud</button>
+    </form>
+  }
+</div>
