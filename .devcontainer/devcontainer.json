@@ -1,0 +1,7 @@
+{
+  "name": "Arreglalo Ya",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:24",
+  "postCreateCommand": "cd frontend && npm install",
+  "forwardPorts": [4200],
+  "portsAttributes": { "4200": { "label": "Frontend Angular", "onAutoForward": "openPreview" } }
+}
