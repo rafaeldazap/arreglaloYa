@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
@@ -13,13 +13,18 @@ export class Login {
   private router = inject(Router);
   correo = '';
   password = '';
-  error = '';
+  error = signal('');
+  cargando = signal(false);
 
   ingresar() {
-    if (this.auth.iniciarSesion(this.correo, this.password)) {
-      this.router.navigate(['/mis-pedidos']);
-    } else {
-      this.error = 'Correo o contraseña no válidos (mínimo 6 caracteres).';
-    }
+    this.error.set('');
+    this.cargando.set(true);
+    this.auth.iniciarSesion(this.correo, this.password).subscribe({
+      next: () => this.router.navigate(['/mis-pedidos']),
+      error: (err) => {
+        this.error.set(this.auth.mensajeError(err));
+        this.cargando.set(false);
+      },
+    });
   }
 }

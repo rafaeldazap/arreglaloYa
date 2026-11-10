@@ -25,7 +25,7 @@
       <label for="fotos">Fotos del lugar (1 a 5)</label>
       <input id="fotos" type="file" accept="image/*" multiple (change)="cargarFotos($event)" />
       <div class="fotos">
-        @for (f of fotos; track $index) {
+        @for (f of fotos(); track $index) {
           <div class="foto">
             <img [src]="f" alt="Foto del problema" />
             <button type="button" (click)="quitarFoto($index)">✕</button>
@@ -56,8 +56,8 @@
       <label for="monto">¿Cuánto puedes pagar? (Bs, opcional)</label>
       <input id="monto" name="monto" type="number" min="0" [(ngModel)]="montoOfrecido" />
 
-      @if (error) {
-        <p class="error">{{ error }}</p>
+      @if (error()) {
+        <p class="error">{{ error() }}</p>
       }
       <button class="btn btn-bloque" type="submit" style="margin-top: 18px">Publicar solicitud</button>
     </form>

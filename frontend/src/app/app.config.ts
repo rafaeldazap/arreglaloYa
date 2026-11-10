@@ -1,10 +1,14 @@
 import { ApplicationConfig, provideBrowserGlobalErrorListeners } from '@angular/core';
-import { provideRouter } from '@angular/router';
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
+import { provideRouter, withHashLocation } from '@angular/router';
+import { environment } from '../environments/environment';
 import { routes } from './app.routes';
+import { tokenInterceptor } from './services/token.interceptor';
 
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
-    provideRouter(routes)
-  ]
+    environment.demo ? provideRouter(routes, withHashLocation()) : provideRouter(routes),
+    provideHttpClient(withInterceptors([tokenInterceptor])),
+  ],
 };

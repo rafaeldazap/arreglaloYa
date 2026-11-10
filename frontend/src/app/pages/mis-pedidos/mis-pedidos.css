@@ -19,3 +19,4 @@ summary { cursor: pointer; color: var(--azul); font-weight: 600; }
 .historial { padding-left: 18px; }
 .historial li { margin: 6px 0; }
 .historial small { color: var(--gris); margin-right: 6px; }
+.confirmar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }

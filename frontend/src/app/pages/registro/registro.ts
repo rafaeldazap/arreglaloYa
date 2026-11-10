@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { Rol } from '../../models';
@@ -24,8 +24,9 @@ export class Registro {
   ci = '';
   especialidades: string[] = [];
   zonas: string[] = [];
-  error = '';
-  enviado = false;
+  error = signal('');
+  enviado = signal(false);
+  cargando = signal(false);
 
   marcar(lista: string[], valor: string) {
     const i = lista.indexOf(valor);
@@ -34,20 +35,30 @@ export class Registro {
   }
 
   registrar() {
-    this.error = '';
-    if (!this.nombre || !this.correo.includes('@') || this.password.length < 6) {
-      this.error = 'Completa nombre, un correo válido y una contraseña de al menos 6 caracteres.';
+    this.error.set('');
+    if (this.rol === 'TRABAJADOR' && (!this.ci || this.especialidades.length === 0 || this.zonas.length === 0)) {
+      this.error.set('Indica tu CI, al menos una especialidad y una zona.');
       return;
     }
-    if (this.rol === 'TRABAJADOR') {
-      if (!this.ci || this.especialidades.length === 0 || this.zonas.length === 0) {
-        this.error = 'Indica tu CI, al menos una especialidad y una zona.';
-        return;
-      }
-      this.enviado = true;
-      return;
-    }
-    this.auth.registrar(this.nombre, this.correo, this.rol);
-    this.router.navigate(['/buscar']);
+    this.cargando.set(true);
+    this.auth
+      .registrar({
+        nombre: this.nombre,
+        correo: this.correo,
+        telefono: this.telefono,
+        password: this.password,
+        rol: this.rol === 'TRABAJADOR' ? 'TRABAJADOR' : 'CLIENTE',
+        ...(this.rol === 'TRABAJADOR' && { ci: this.ci, especialidades: this.especialidades, zonas: this.zonas }),
+      })
+      .subscribe({
+        next: () => {
+          if (this.rol === 'TRABAJADOR') this.enviado.set(true);
+          else this.router.navigate(['/buscar']);
+        },
+        error: (err) => {
+          this.error.set(this.auth.mensajeError(err));
+          this.cargando.set(false);
+        },
+      });
   }
 }

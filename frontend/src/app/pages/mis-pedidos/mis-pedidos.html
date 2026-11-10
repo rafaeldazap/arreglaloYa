@@ -38,7 +38,15 @@
         </details>
 
         @if (puedeCancelar(p)) {
-          <button class="btn btn-peligro" (click)="cancelar(p)">Cancelar solicitud</button>
+          @if (confirmando() === p.id) {
+            <div class="confirmar">
+              <span>¿Seguro que quieres cancelar esta solicitud?</span>
+              <button class="btn btn-peligro" (click)="cancelar(p)">Sí, cancelar</button>
+              <button class="btn btn-secundario" (click)="confirmando.set(null)">No</button>
+            </div>
+          } @else {
+            <button class="btn btn-peligro" (click)="confirmando.set(p.id)">Cancelar solicitud</button>
+          }
         }
       </div>
     } @empty {

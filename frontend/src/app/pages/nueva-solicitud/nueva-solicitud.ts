@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
@@ -23,8 +23,8 @@ export class NuevaSolicitud implements OnInit {
   direccion = '';
   fecha = '';
   montoOfrecido: number | null = null;
-  fotos: string[] = [];
-  error = '';
+  fotos = signal<string[]>([]);
+  error = signal('');
 
   ngOnInit() {
     const id = Number(this.ruta.snapshot.queryParamMap.get('trabajador'));
@@ -39,27 +39,27 @@ export class NuevaSolicitud implements OnInit {
     const archivos = (evento.target as HTMLInputElement).files;
     if (!archivos) return;
     for (const archivo of Array.from(archivos)) {
-      if (this.fotos.length >= 5) {
-        this.error = 'Puedes subir como máximo 5 fotos.';
+      if (this.fotos().length >= 5) {
+        this.error.set('Puedes subir como máximo 5 fotos.');
         break;
       }
       const lector = new FileReader();
-      lector.onload = () => this.fotos.push(lector.result as string);
+      lector.onload = () => this.fotos.update((lista) => [...lista, lector.result as string]);
       lector.readAsDataURL(archivo);
     }
   }
 
   quitarFoto(i: number) {
-    this.fotos.splice(i, 1);
+    this.fotos.update((lista) => lista.filter((_, j) => j !== i));
   }
 
   publicar() {
     if (!this.categoria || !this.descripcion || !this.zona || !this.direccion || !this.fecha) {
-      this.error = 'Completa la categoría, la descripción, la zona, la dirección y la fecha.';
+      this.error.set('Completa la categoría, la descripción, la zona, la dirección y la fecha.');
       return;
     }
-    if (this.fotos.length === 0) {
-      this.error = 'Sube al menos una foto del problema.';
+    if (this.fotos().length === 0) {
+      this.error.set('Sube al menos una foto del problema.');
       return;
     }
     this.datos.crearPedido({
@@ -69,7 +69,7 @@ export class NuevaSolicitud implements OnInit {
       direccion: this.direccion,
       fecha: this.fecha,
       montoOfrecido: this.montoOfrecido ?? 0,
-      fotos: this.fotos,
+      fotos: this.fotos(),
       trabajador: this.trabajador || undefined,
     });
     this.router.navigate(['/mis-pedidos']);

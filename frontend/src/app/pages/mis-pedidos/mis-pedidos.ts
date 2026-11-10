@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { EstadoPedido, Pedido } from '../../models';
 import { AuthService } from '../../services/auth.service';
@@ -13,6 +13,7 @@ import { DatosService } from '../../services/datos.service';
 export class MisPedidos {
   datos = inject(DatosService);
   auth = inject(AuthService);
+  confirmando = signal<number | null>(null);
   pasos: EstadoPedido[] = ['PENDIENTE', 'APROBADO', 'EN_PROCESO', 'FINALIZADO'];
 
   nombres: Record<EstadoPedido, string> = {
@@ -33,8 +34,7 @@ export class MisPedidos {
   }
 
   cancelar(pedido: Pedido) {
-    if (confirm('¿Seguro que quieres cancelar esta solicitud?')) {
-      this.datos.cancelarPedido(pedido.id);
-    }
+    this.datos.cancelarPedido(pedido.id);
+    this.confirmando.set(null);
   }
 }

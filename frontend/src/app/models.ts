@@ -13,6 +13,7 @@ export interface Usuario {
   nombre: string;
   correo: string;
   rol: Rol;
+  estadoCuenta: 'REVISION' | 'ACTIVO' | 'SUSPENDIDO' | 'BLOQUEADO_PERMANENTE';
 }
 
 export interface Opinion {
