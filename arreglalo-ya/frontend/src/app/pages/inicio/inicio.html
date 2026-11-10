@@ -1,0 +1,38 @@
+<section class="portada">
+  <div class="contenedor">
+    <h1>¿Se rompió algo en casa?</h1>
+    <p>Encuentra plomeros, electricistas, albañiles y técnicos de tu zona en Cochabamba. Revisa sus especialidades y opiniones antes de contratar.</p>
+    <form class="buscador" (ngSubmit)="buscar()">
+      <select name="categoria" [(ngModel)]="categoria">
+        <option value="">¿Qué necesitas?</option>
+        @for (c of datos.categorias; track c) {
+          <option [value]="c">{{ c }}</option>
+        }
+      </select>
+      <select name="zona" [(ngModel)]="zona">
+        <option value="">¿En qué zona?</option>
+        @for (z of datos.zonas; track z) {
+          <option [value]="z">{{ z }}</option>
+        }
+      </select>
+      <button class="btn" type="submit">Buscar</button>
+    </form>
+  </div>
+</section>
+
+<section class="contenedor">
+  <h2>Categorías</h2>
+  <div class="categorias">
+    @for (c of datos.categorias; track c) {
+      <button class="categoria" (click)="elegirCategoria(c)">{{ c }}</button>
+    }
+  </div>
+
+  <h2 class="titulo-pasos">¿Cómo funciona?</h2>
+  <div class="pasos">
+    <div class="tarjeta"><b>1. Publica tu pedido</b><p>Describe el problema, sube fotos e indica tu zona y cuánto puedes pagar.</p></div>
+    <div class="tarjeta"><b>2. Recibe cotizaciones</b><p>Los trabajadores revisados de tu zona te envían su presupuesto.</p></div>
+    <div class="tarjeta"><b>3. Sigue tu pedido</b><p>Ve cada paso del servicio y califica al trabajador al terminar.</p></div>
+  </div>
+  <p class="nota">Revisamos la identidad y los documentos de cada trabajador antes de publicarlo. No somos una certificadora profesional.</p>
+</section>

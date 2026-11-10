@@ -1,0 +1,13 @@
+.perfil { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; margin-top: 14px; }
+.lateral { display: flex; flex-direction: column; gap: 16px; }
+.cabecera { display: flex; gap: 16px; align-items: center; margin-bottom: 10px; }
+.cabecera h1 { margin: 0; }
+.cabecera p { margin: 4px 0; }
+.avatar { width: 72px; height: 72px; border-radius: 50%; background: var(--azul-claro); color: var(--azul); display: grid; place-items: center; font-size: 2rem; font-weight: 700; flex-shrink: 0; }
+.verificado { color: var(--verde); font-size: .9rem; font-weight: 600; }
+h3 { margin: 18px 0 8px; }
+.lateral h3 { margin-top: 0; }
+.opinion { border-top: 1px solid var(--borde); padding: 10px 0; }
+.opinion p { margin: 4px 0; }
+.opinion small { color: var(--gris); }
+@media (max-width: 760px) { .perfil { grid-template-columns: 1fr; } }

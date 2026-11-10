@@ -1,0 +1,18 @@
+.barra { background: var(--azul); color: #fff; position: sticky; top: 0; z-index: 10; }
+.barra-contenido { max-width: 1100px; margin: 0 auto; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.logo { color: #fff; font-size: 1.4rem; font-weight: 800; text-decoration: none; }
+.logo span { color: var(--naranja); }
+nav { display: flex; align-items: center; gap: 18px; }
+nav a { color: #dbe6f5; text-decoration: none; font-weight: 500; }
+nav a:hover, nav a.activo { color: #fff; }
+nav .btn { color: #fff; }
+.saludo { color: #fff; font-size: .9rem; }
+.btn-borde { background: transparent; border: 1px solid #fff; }
+.menu-btn { display: none; background: none; border: none; color: #fff; font-size: 1.6rem; cursor: pointer; }
+main { min-height: calc(100vh - 120px); }
+.pie { text-align: center; padding: 20px; color: var(--gris); font-size: .85rem; }
+@media (max-width: 760px) {
+  .menu-btn { display: block; }
+  nav { display: none; position: absolute; top: 60px; left: 0; right: 0; background: var(--azul); flex-direction: column; align-items: stretch; padding: 12px 16px 18px; gap: 12px; }
+  nav.abierto { display: flex; }
+}

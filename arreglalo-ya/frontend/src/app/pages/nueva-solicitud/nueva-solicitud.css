@@ -1,0 +1,7 @@
+.formulario { max-width: 680px; }
+.dos-columnas { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.fotos { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.foto { position: relative; }
+.foto img { width: 90px; height: 90px; object-fit: cover; border-radius: 8px; border: 1px solid var(--borde); }
+.foto button { position: absolute; top: 2px; right: 2px; background: rgba(0,0,0,.6); color: #fff; border: none; border-radius: 50%; width: 22px; height: 22px; cursor: pointer; }
+@media (max-width: 600px) { .dos-columnas { grid-template-columns: 1fr; } }

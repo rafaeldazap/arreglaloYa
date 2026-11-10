@@ -1,0 +1,56 @@
+<div class="contenedor">
+  <div class="encabezado">
+    <h1>Mis pedidos</h1>
+    <a class="btn" routerLink="/nueva-solicitud">+ Nueva solicitud</a>
+  </div>
+
+  @if (!auth.usuario()) {
+    <div class="tarjeta">Para ver tus pedidos <a routerLink="/login">inicia sesión</a>.</div>
+  } @else {
+    @for (p of datos.pedidos(); track p.id) {
+      <div class="tarjeta pedido">
+        <div class="fila">
+          <div>
+            <span class="etiqueta">{{ p.categoria }}</span>
+            <h3>{{ p.descripcion }}</h3>
+            <p class="ayuda">{{ p.zona }} · {{ p.fecha }} · Ofrecido: Bs {{ p.montoOfrecido }}@if (p.trabajador) { · Trabajador: {{ p.trabajador }} }</p>
+          </div>
+          <span class="estado" [class]="'estado ' + p.estado">{{ nombres[p.estado] }}</span>
+        </div>
+
+        @if (p.estado !== 'CANCELADO' && p.estado !== 'FUERA_DE_TIEMPO') {
+          <div class="pasos">
+            @for (paso of pasos; track paso) {
+              <div class="paso" [class.hecho]="pasoCompletado(p, paso)">
+                <span class="punto"></span>{{ nombres[paso] }}
+              </div>
+            }
+          </div>
+        }
+
+        <details>
+          <summary>Ver historial ({{ p.historial.length }})</summary>
+          <ul class="historial">
+            @for (h of p.historial; track $index) {
+              <li><small>{{ h.fecha }}</small> {{ h.descripcion }}</li>
+            }
+          </ul>
+        </details>
+
+        @if (puedeCancelar(p)) {
+          @if (confirmando() === p.id) {
+            <div class="confirmar">
+              <span>¿Seguro que quieres cancelar esta solicitud?</span>
+              <button class="btn btn-peligro" (click)="cancelar(p)">Sí, cancelar</button>
+              <button class="btn btn-secundario" (click)="confirmando.set(null)">No</button>
+            </div>
+          } @else {
+            <button class="btn btn-peligro" (click)="confirmando.set(p.id)">Cancelar solicitud</button>
+          }
+        }
+      </div>
+    } @empty {
+      <div class="tarjeta">Todavía no tienes pedidos.</div>
+    }
+  }
+</div>

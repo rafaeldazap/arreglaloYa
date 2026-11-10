@@ -1,0 +1,13 @@
+.portada { background: linear-gradient(135deg, var(--azul), #2b4c7e); color: #fff; }
+.portada .contenedor { padding: 56px 16px; }
+.portada h1 { font-size: 2.2rem; margin-bottom: 10px; }
+.portada p { max-width: 620px; color: #dbe6f5; font-size: 1.1rem; }
+.buscador { display: flex; gap: 10px; margin-top: 24px; max-width: 700px; flex-wrap: wrap; }
+.buscador select { flex: 1; min-width: 180px; }
+.categorias { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+.categoria { background: #fff; border: 1px solid var(--borde); border-radius: 12px; padding: 22px; font-size: 1.05rem; font-weight: 600; cursor: pointer; color: var(--azul); }
+.categoria:hover { border-color: var(--naranja); }
+.titulo-pasos { margin-top: 36px; }
+.pasos { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+.pasos p { color: var(--gris); margin-bottom: 0; }
+.nota { color: var(--gris); font-size: .9rem; margin-top: 20px; }

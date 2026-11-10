@@ -1,0 +1,46 @@
+<div class="contenedor">
+  <h1>Buscar trabajadores</h1>
+  <div class="filtros tarjeta">
+    <div>
+      <label for="categoria">Especialidad</label>
+      <select id="categoria" name="categoria" [(ngModel)]="categoria" (change)="filtrar()">
+        <option value="">Todas</option>
+        @for (c of datos.categorias; track c) {
+          <option [value]="c">{{ c }}</option>
+        }
+      </select>
+    </div>
+    <div>
+      <label for="zona">Zona</label>
+      <select id="zona" name="zona" [(ngModel)]="zona" (change)="filtrar()">
+        <option value="">Todas</option>
+        @for (z of datos.zonas; track z) {
+          <option [value]="z">{{ z }}</option>
+        }
+      </select>
+    </div>
+  </div>
+
+  <p class="cantidad">{{ resultados.length }} trabajador(es) encontrado(s)</p>
+
+  <div class="grid">
+    @for (t of resultados; track t.id) {
+      <div class="tarjeta trabajador">
+        <div class="avatar">{{ t.nombre.charAt(0) }}</div>
+        <h3>{{ t.nombre }}</h3>
+        <p><span class="estrellas">{{ estrellas(t.promedio) }}</span> {{ t.promedio }} · {{ t.trabajosRealizados }} trabajos</p>
+        <div>
+          @for (e of t.especialidades; track e) {
+            <span class="etiqueta">{{ e }}</span>
+          }
+        </div>
+        <p class="zonas">Atiende en: {{ t.zonas.join(', ') }}</p>
+        <a class="btn btn-secundario btn-bloque" [routerLink]="['/trabajador', t.id]">Ver perfil</a>
+      </div>
+    } @empty {
+      <div class="tarjeta">
+        No hay trabajadores disponibles con esos filtros por ahora. Prueba con otra zona o publica tu pedido igual: te avisaremos cuando alguien pueda atenderte.
+      </div>
+    }
+  </div>
+</div>
