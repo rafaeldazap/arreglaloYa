@@ -8,9 +8,9 @@ spring:
     name: arreglalo-ya-backend
   
   datasource:
-    url: ${DB_URL:jdbc:postgresql://localhost:5432/arreglaloya_db}
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/postgres}
     username: ${DB_USERNAME:postgres}
-    password: ${DB_PASSWORD:postgres}
+    password: ${DB_PASSWORD:Dorianxd770}
     driver-class-name: org.postgresql.Driver
 
   jpa:
@@ -19,6 +19,7 @@ spring:
     show-sql: true
     properties:
       hibernate:
+        default_schema: public
         format_sql: true
         jdbc:
           lob:

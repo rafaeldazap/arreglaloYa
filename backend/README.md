@@ -1,6 +1,8 @@
 # Backend - Arreglalo Ya 🛠️
 
-Backend desarrollado en **Java 21** y **Spring Boot 3.4**, siguiendo la arquitectura limpia y modular de capas (Controller - Service - Repository - Entity - DTO) con seguridad JWT y documentación OpenAPI/Swagger.
+Backend desarrollado en **Java 21** y **Spring Boot 3.4**, siguiendo la arquitectura limpia en capas (Controller - Service - Repository - Entity - DTO) con seguridad JWT, manejo centralizado de excepciones y documentación OpenAPI/Swagger.
+
+Cubre al 100% las **14 tablas** del modelo PostgreSQL.
 
 ---
 
@@ -8,51 +10,46 @@ Backend desarrollado en **Java 21** y **Spring Boot 3.4**, siguiendo la arquitec
 
 * **Java 21** (LTS)
 * **Spring Boot 3.4.3**
-* **Spring Data JPA / Hibernate**
+* **Spring Data JPA / Hibernate** (Schema `public`, `ddl-auto: update`)
 * **Spring Security 6** + **JWT (JJWT 0.12.6)**
 * **PostgreSQL**
 * **Springdoc OpenAPI / Swagger UI**
 * **ModelMapper** y **Lombok**
-* **Maven Wrapper (`mvnw`)** incluido
+* **Maven Wrapper (`mvnw.cmd`)** incluido
 
 ---
 
-## 📁 Estructura del Proyecto
+## 📁 Módulos y Cobertura de Base de Datos
 
-```
-backend/
-├── pom.xml
-├── mvnw / mvnw.cmd
-├── base_de_datos.sql
-└── src/
-    └── main/
-        ├── resources/
-        │   └── application.yml
-        └── java/com/arreglaloya/
-            ├── ArreglaloYaApplication.java
-            ├── config/          # SecurityConfig, CorsConfig, OpenApiConfig, ModelMapperConfig
-            ├── security/        # JwtService, JwtAuthFilter, CustomUserDetailsService
-            ├── exception/       # GlobalExceptionHandler, ResourceNotFoundException, BusinessException
-            ├── enums/           # RolUsuario, EstadoCuenta, EstadoSolicitud, etc.
-            ├── model/           # Entidades JPA (14 tablas del esquema de base de datos)
-            ├── repository/      # Interfaces Spring Data JPA
-            ├── dto/             # DTOs clasificados por dominio (auth, catalogo, trabajador, solicitud)
-            ├── service/         # Lógica de negocio (AuthService, TrabajadorService, SolicitudService, etc.)
-            └── controller/      # Endpoints REST (AuthController, CatalogoController, etc.)
-```
+| Tabla en BD | Entidad JPA | Controlador | Descripción / Endpoints |
+|---|---|---|---|
+| `usuario` | `Usuario` | `AuthController` | Login, registro de cliente y trabajador, emisión de JWT |
+| `perfil_trabajador` | `PerfilTrabajador` | `TrabajadorController` | Búsqueda por filtros (zona/categoría) y consulta de perfil |
+| `categoria` | `Categoria` | `CatalogoController` | `GET /categorias` (Plomería, Electricidad, etc.) |
+| `zona` | `Zona` | `CatalogoController` | `GET /zonas` (Cala Cala, Queru Queru, etc.) |
+| `trabajador_categoria` | *(ManyToMany)* | - | Relación trabajadores y especialidades |
+| `trabajador_zona` | *(ManyToMany)* | - | Relación trabajadores y zonas que cubren |
+| `horario_atencion` | `HorarioAtencion` | - | Horarios disponibles por trabajador |
+| `solicitud_servicio` | `SolicitudServicio` | `SolicitudController` | Creación de pedidos, listado propio y transición de estados |
+| `foto_solicitud` | `FotoSolicitud` | `SolicitudController` | Fotos asociadas a cada solicitud |
+| `cotizacion` | `Cotizacion` | `CotizacionController` | Propuesta de costo por trabajador, aceptación o rechazo por cliente |
+| `transaccion_pago` | `TransaccionPago` | `PagoController` | Anticipo (25%), saldo final (75%) y confirmación de liberación |
+| `reclamo_sancion` | `ReclamoSancion` | `ReclamoController` | Disputas (inasistencia, robo, etc.) y suspensiones por ADMIN |
+| `calificacion` | `Calificacion` | `CalificacionController` | Calificaciones (1-5 estrellas) y recálculo automático de promedios |
+| `historial_estado` | `HistorialEstado` | - | Auditoría automática de cambios de estado de cada servicio |
 
 ---
 
 ## ⚙️ Configuración y Variables de Entorno
 
-El archivo [`src/main/resources/application.yml`](src/main/resources/application.yml) ya viene configurado con valores por defecto para desarrollo local, y permite sobreescribir mediante variables de entorno:
+El archivo [`src/main/resources/application.yml`](src/main/resources/application.yml) viene listo para desarrollo local y producción:
 
 | Variable | Valor por defecto | Descripción |
 |---|---|---|
-| `DB_URL` | `jdbc:postgresql://localhost:5432/arreglaloya_db` | URL de la base de datos |
-| `DB_USERNAME` | `postgres` | Usuario de PostgreSQL |
+| `DB_URL` | `jdbc:postgresql://localhost:5432/arreglaloya_db` | URL de conexión PostgreSQL |
+| `DB_USERNAME` | `postgres` | Usuario de base de datos |
 | `DB_PASSWORD` | `postgres` | Contraseña |
-| `JWT_SECRET` | *(clave aleatoria 256 bits)* | Clave para firmar tokens |
+| `JWT_SECRET` | *(Clave de 256 bits predeterminada)* | Clave para firma de tokens JWT |
 
 ---
 
@@ -61,7 +58,7 @@ El archivo [`src/main/resources/application.yml`](src/main/resources/application
 Desde la carpeta `backend`:
 
 ```powershell
-# En Windows (usando el Maven Wrapper incluido):
+# En Windows (con el Maven Wrapper incluido):
 .\mvnw.cmd spring-boot:run
 ```
 
@@ -69,12 +66,6 @@ Desde la carpeta `backend`:
 
 ## 📖 Documentación Interactiva (Swagger UI)
 
-Una vez iniciado el backend, abre en tu navegador:
+Con el backend en ejecución, abre en tu navegador:
 
 👉 **http://localhost:8080/api/v1/swagger-ui.html**
-
-Aquí podrás probar directamente todos los endpoints:
-* **Autenticación:** `/api/v1/auth/login`, `/api/v1/auth/registro-cliente`, `/api/v1/auth/registro-trabajador`.
-* **Catálogos:** `GET /api/v1/categorias`, `GET /api/v1/zonas`.
-* **Trabajadores:** `GET /api/v1/trabajadores?categoria=1&zona=2`, `GET /api/v1/trabajadores/{id}`.
-* **Solicitudes:** `POST /api/v1/solicitudes`, `GET /api/v1/solicitudes/mis-pedidos`, `PATCH /api/v1/solicitudes/{id}/estado`.
