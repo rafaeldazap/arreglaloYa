@@ -30,3 +30,14 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--naranja); b
 .etiqueta { display: inline-block; background: var(--azul-claro); color: var(--azul); border-radius: 999px; padding: 3px 10px; font-size: .8rem; margin: 2px 4px 2px 0; }
 .estrellas { color: #f2b01e; letter-spacing: 1px; }
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 16px; }
+.btn-gris { background: #e5e9ef; color: var(--texto); }
+.estado { padding: 4px 12px; border-radius: 999px; font-size: .85rem; font-weight: 600; white-space: nowrap; background: var(--azul-claro); color: var(--azul); }
+.estado.PENDIENTE, .estado.REVISION, .estado.EN_REVISION { background: #fff4e5; color: #b26a00; }
+.estado.APROBADO { background: #eef0ff; color: #3b46b8; }
+.estado.EN_PROCESO { background: #e7f0ff; color: #1d4ed8; }
+.estado.FINALIZADO, .estado.ACTIVO, .estado.PROCEDENTE { background: #e6f6f3; color: #1d6b61; }
+.estado.CANCELADO, .estado.FUERA_DE_TIEMPO, .estado.SUSPENDIDO, .estado.BLOQUEADO_PERMANENTE, .estado.IMPROCEDENTE { background: #fdecec; color: var(--rojo); }
+.pestanas { display: flex; gap: 6px; flex-wrap: wrap; border-bottom: 1px solid var(--borde); margin-bottom: 18px; }
+.pestanas button { background: none; border: none; border-bottom: 3px solid transparent; padding: 10px 14px; font: inherit; font-weight: 600; color: var(--gris); cursor: pointer; }
+.pestanas button.activa { color: var(--azul); border-bottom-color: var(--naranja-fuerte); }
+.contador { display: inline-block; min-width: 20px; padding: 0 6px; margin-left: 4px; border-radius: 999px; background: var(--naranja-fuerte); color: #fff; font-size: .75rem; text-align: center; }

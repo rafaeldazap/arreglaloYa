@@ -52,7 +52,16 @@ export class Registro {
       })
       .subscribe({
         next: () => {
-          if (this.rol === 'TRABAJADOR') this.enviado.set(true);
+          if (this.rol === 'TRABAJADOR') {
+            this.datos.agregarTrabajadorEnRevision({
+              nombre: this.nombre,
+              correo: this.correo,
+              ci: this.ci,
+              especialidades: [...this.especialidades],
+              zonas: [...this.zonas],
+            });
+            this.enviado.set(true);
+          }
           else this.router.navigate(['/buscar']);
         },
         error: (err) => {

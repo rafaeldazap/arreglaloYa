@@ -26,14 +26,14 @@
 
           <label>Especialidades</label>
           <div class="opciones">
-            @for (c of datos.categorias; track c) {
+            @for (c of datos.categorias(); track c) {
               <label class="opcion"><input type="checkbox" (change)="marcar(especialidades, c)" /> {{ c }}</label>
             }
           </div>
 
           <label>Zonas donde atiendes</label>
           <div class="opciones">
-            @for (z of datos.zonas; track z) {
+            @for (z of datos.zonas(); track z) {
               <label class="opcion"><input type="checkbox" (change)="marcar(zonas, z)" /> {{ z }}</label>
             }
           </div>

@@ -7,9 +7,10 @@ import { AuthService } from '../../services/auth.service';
   selector: 'app-login',
   imports: [FormsModule, RouterLink],
   templateUrl: './login.html',
+  styleUrl: './login.css',
 })
 export class Login {
-  private auth = inject(AuthService);
+  auth = inject(AuthService);
   private router = inject(Router);
   correo = '';
   password = '';
@@ -20,7 +21,7 @@ export class Login {
     this.error.set('');
     this.cargando.set(true);
     this.auth.iniciarSesion(this.correo, this.password).subscribe({
-      next: () => this.router.navigate(['/mis-pedidos']),
+      next: () => this.router.navigateByUrl(this.auth.rutaInicio()),
       error: (err) => {
         this.error.set(this.auth.mensajeError(err));
         this.cargando.set(false);

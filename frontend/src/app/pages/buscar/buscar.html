@@ -5,7 +5,7 @@
       <label for="categoria">Especialidad</label>
       <select id="categoria" name="categoria" [(ngModel)]="categoria" (change)="filtrar()">
         <option value="">Todas</option>
-        @for (c of datos.categorias; track c) {
+        @for (c of datos.categorias(); track c) {
           <option [value]="c">{{ c }}</option>
         }
       </select>
@@ -14,7 +14,7 @@
       <label for="zona">Zona</label>
       <select id="zona" name="zona" [(ngModel)]="zona" (change)="filtrar()">
         <option value="">Todas</option>
-        @for (z of datos.zonas; track z) {
+        @for (z of datos.zonas(); track z) {
           <option [value]="z">{{ z }}</option>
         }
       </select>

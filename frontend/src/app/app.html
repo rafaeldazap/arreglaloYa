@@ -3,13 +3,24 @@
     <a routerLink="/" class="logo">Arréglalo <span>Ya</span></a>
     <button class="menu-btn" (click)="menuAbierto = !menuAbierto" aria-label="Menú">☰</button>
     <nav [class.abierto]="menuAbierto" (click)="menuAbierto = false">
-      <a routerLink="/buscar" routerLinkActive="activo">Buscar trabajadores</a>
       @if (auth.usuario(); as u) {
-        <a routerLink="/nueva-solicitud" routerLinkActive="activo">Nueva solicitud</a>
-        <a routerLink="/mis-pedidos" routerLinkActive="activo">Mis pedidos</a>
+        @switch (u.rol) {
+          @case ('CLIENTE') {
+            <a routerLink="/buscar" routerLinkActive="activo">Buscar trabajadores</a>
+            <a routerLink="/nueva-solicitud" routerLinkActive="activo">Nueva solicitud</a>
+            <a routerLink="/mis-pedidos" routerLinkActive="activo">Mis pedidos</a>
+          }
+          @case ('TRABAJADOR') {
+            <a routerLink="/panel-trabajador" routerLinkActive="activo">Mi panel</a>
+          }
+          @case ('ADMIN') {
+            <a routerLink="/admin" routerLinkActive="activo">Administración</a>
+          }
+        }
         <span class="saludo">Hola, {{ u.nombre }}</span>
         <button class="btn btn-borde" (click)="salir()">Salir</button>
       } @else {
+        <a routerLink="/buscar" routerLinkActive="activo">Buscar trabajadores</a>
         <a routerLink="/login" routerLinkActive="activo">Iniciar sesión</a>
         <a routerLink="/registro" class="btn">Registrarse</a>
       }

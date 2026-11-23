@@ -12,5 +12,13 @@
       <button class="btn btn-bloque" type="submit" style="margin-top: 18px" [disabled]="cargando()">{{ cargando() ? 'Ingresando...' : 'Ingresar' }}</button>
     </form>
     <p>¿No tienes cuenta? <a routerLink="/registro">Regístrate</a></p>
+    @if (auth.esDemo) {
+      <div class="cuentas-demo">
+        <b>Cuentas de prueba</b> (contraseña <code>123456</code>)
+        @for (c of auth.cuentasDemo; track c.correo) {
+          <button type="button" (click)="correo = c.correo; password = '123456'">{{ c.rol === 'ADMIN' ? 'Administrador' : c.rol === 'TRABAJADOR' ? 'Trabajador' : 'Cliente' }}: {{ c.correo }}</button>
+        }
+      </div>
+    }
   </div>
 </div>

@@ -63,6 +63,7 @@ export class NuevaSolicitud implements OnInit {
       return;
     }
     this.datos.crearPedido({
+      cliente: this.auth.usuario()!.nombre,
       categoria: this.categoria,
       descripcion: this.descripcion,
       zona: this.zona,

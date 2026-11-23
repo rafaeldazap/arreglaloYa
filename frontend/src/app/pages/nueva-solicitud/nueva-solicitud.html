@@ -14,7 +14,7 @@
       <label for="categoria">¿Qué tipo de trabajo necesitas?</label>
       <select id="categoria" name="categoria" [(ngModel)]="categoria">
         <option value="">Elige una categoría</option>
-        @for (c of datos.categorias; track c) {
+        @for (c of datos.categorias(); track c) {
           <option [value]="c">{{ c }}</option>
         }
       </select>
@@ -38,7 +38,7 @@
           <label for="zona">Zona</label>
           <select id="zona" name="zona" [(ngModel)]="zona">
             <option value="">Elige tu zona</option>
-            @for (z of datos.zonas; track z) {
+            @for (z of datos.zonas(); track z) {
               <option [value]="z">{{ z }}</option>
             }
           </select>

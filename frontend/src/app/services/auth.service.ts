@@ -85,13 +85,33 @@ export class AuthService {
   }
 
   // Respuesta simulada para la versión de demostración (sin backend)
+  // Cuentas de prueba de la versión demo (contraseña: 123456)
+  cuentasDemo: Usuario[] = [
+    { id: 1, nombre: 'María López', correo: 'cliente@demo.com', rol: 'CLIENTE', estadoCuenta: 'ACTIVO' },
+    { id: 2, nombre: 'Juan Mamani', correo: 'trabajador@demo.com', rol: 'TRABAJADOR', estadoCuenta: 'ACTIVO' },
+    { id: 3, nombre: 'Administrador', correo: 'admin@demo.com', rol: 'ADMIN', estadoCuenta: 'ACTIVO' },
+  ];
+
+  esDemo = environment.demo;
+
+  // Página de inicio según el rol
+  rutaInicio(): string {
+    const rol = this.usuario()?.rol;
+    if (rol === 'ADMIN') return '/admin';
+    if (rol === 'TRABAJADOR') return '/panel-trabajador';
+    return '/mis-pedidos';
+  }
+
+  // Respuesta simulada para la versión de demostración (sin backend)
   private demo(nombre: string, correo: string, rol: 'CLIENTE' | 'TRABAJADOR', password: string): Observable<RespuestaAuth> {
     if (!correo.includes('@') || password.length < 6) {
       return throwError(
         () => new HttpErrorResponse({ status: 400, error: { message: 'Correo no válido o contraseña de menos de 6 caracteres' } }),
       );
     }
+    const cuenta = this.cuentasDemo.find((c) => c.correo === correo.toLowerCase());
+    if (cuenta) return of({ token: 'demo', usuario: cuenta });
     const estadoCuenta = rol === 'TRABAJADOR' ? 'REVISION' : 'ACTIVO';
-    return of({ token: 'demo', usuario: { id: 1, nombre, correo, rol, estadoCuenta } });
+    return of({ token: 'demo', usuario: { id: Date.now(), nombre, correo, rol, estadoCuenta } });
   }
 }
