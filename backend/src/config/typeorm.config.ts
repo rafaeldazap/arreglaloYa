@@ -1,0 +1,41 @@
+import { ConfigService } from '@nestjs/config';
+import { TypeOrmModuleOptions } from '@nestjs/typeorm';
+import {
+  Usuario,
+  PerfilTrabajador,
+  Categoria,
+  Zona,
+  HorarioAtencion,
+  SolicitudServicio,
+  FotoSolicitud,
+  Cotizacion,
+  TransaccionPago,
+  ReclamoSancion,
+  Calificacion,
+  HistorialEstado,
+} from '../entities';
+
+export const getTypeOrmConfig = (configService: ConfigService): TypeOrmModuleOptions => ({
+  type: 'postgres',
+  host: configService.getOrThrow<string>('DB_HOST'),
+  port: parseInt(configService.getOrThrow<string>('DB_PORT'), 10),
+  username: configService.getOrThrow<string>('DB_USERNAME'),
+  password: configService.getOrThrow<string>('DB_PASSWORD'),
+  database: configService.getOrThrow<string>('DB_DATABASE'),
+  entities: [
+    Usuario,
+    PerfilTrabajador,
+    Categoria,
+    Zona,
+    HorarioAtencion,
+    SolicitudServicio,
+    FotoSolicitud,
+    Cotizacion,
+    TransaccionPago,
+    ReclamoSancion,
+    Calificacion,
+    HistorialEstado,
+  ],
+  synchronize: false, // Las 14 tablas ya existen en PostgreSQL
+  logging: ['error', 'warn'],
+});

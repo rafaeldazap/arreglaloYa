@@ -1,55 +1,50 @@
-# Backend - Arreglalo Ya 🛠️
+# Backend - Arreglalo Ya 🛠️ (NestJS + TypeORM)
 
-Backend desarrollado en **Java 21** y **Spring Boot 3.4**, siguiendo la arquitectura limpia en capas (Controller - Service - Repository - Entity - DTO) con seguridad JWT, manejo centralizado de excepciones y documentación OpenAPI/Swagger.
+Backend oficial de la materia **Sistemas de Información I**, desarrollado con **NestJS (Node.js)** y **TypeORM**, conectado a **PostgreSQL**.
 
-Cubre al 100% las **14 tablas** del modelo PostgreSQL.
-
----
-
-## 🚀 Tecnologías
-
-* **Java 21** (LTS)
-* **Spring Boot 3.4.3**
-* **Spring Data JPA / Hibernate** (Schema `public`, `ddl-auto: update`)
-* **Spring Security 6** + **JWT (JJWT 0.12.6)**
-* **PostgreSQL**
-* **Springdoc OpenAPI / Swagger UI**
-* **ModelMapper** y **Lombok**
-* **Maven Wrapper (`mvnw.cmd`)** incluido
+*(Nota: La versión previa en Spring Boot quedó respaldada en `backend-spring-backup`).*
 
 ---
 
-## 📁 Módulos y Cobertura de Base de Datos
+## 🚀 Tecnologías y Seguridad
 
-| Tabla en BD | Entidad JPA | Controlador | Descripción / Endpoints |
-|---|---|---|---|
-| `usuario` | `Usuario` | `AuthController` | Login, registro de cliente y trabajador, emisión de JWT |
-| `perfil_trabajador` | `PerfilTrabajador` | `TrabajadorController` | Búsqueda por filtros (zona/categoría) y consulta de perfil |
-| `categoria` | `Categoria` | `CatalogoController` | `GET /categorias` (Plomería, Electricidad, etc.) |
-| `zona` | `Zona` | `CatalogoController` | `GET /zonas` (Cala Cala, Queru Queru, etc.) |
-| `trabajador_categoria` | *(ManyToMany)* | - | Relación trabajadores y especialidades |
-| `trabajador_zona` | *(ManyToMany)* | - | Relación trabajadores y zonas que cubren |
-| `horario_atencion` | `HorarioAtencion` | - | Horarios disponibles por trabajador |
-| `solicitud_servicio` | `SolicitudServicio` | `SolicitudController` | Creación de pedidos, listado propio y transición de estados |
-| `foto_solicitud` | `FotoSolicitud` | `SolicitudController` | Fotos asociadas a cada solicitud |
-| `cotizacion` | `Cotizacion` | `CotizacionController` | Propuesta de costo por trabajador, aceptación o rechazo por cliente |
-| `transaccion_pago` | `TransaccionPago` | `PagoController` | Anticipo (25%), saldo final (75%) y confirmación de liberación |
-| `reclamo_sancion` | `ReclamoSancion` | `ReclamoController` | Disputas (inasistencia, robo, etc.) y suspensiones por ADMIN |
-| `calificacion` | `Calificacion` | `CalificacionController` | Calificaciones (1-5 estrellas) y recálculo automático de promedios |
-| `historial_estado` | `HistorialEstado` | - | Auditoría automática de cambios de estado de cada servicio |
+* **Node.js**: v20+ / v24 (LTS)
+* **Framework**: **NestJS v10** (TypeScript)
+* **ORM**: **TypeORM v0.3** + **PostgreSQL**
+* **Seguridad**:
+  * Passport.js + `@nestjs/jwt` (JWT Bearer Token) + `bcrypt`
+  * Control de acceso basado en roles (**RBAC**: `CLIENTE`, `TRABAJADOR`, `ADMIN`) y propiedad por recurso (anti-IDOR)
+  * `helmet` + CORS por lista blanca (`CORS_ORIGINS`) + `@nestjs/throttler` (rate limiting)
+  * Serialización segura (`select: false` + `@Exclude()` en `passwordHash`, filtro global de excepciones)
+  * `@nestjs/schedule` para caducidad automática a los 30 días (**RN-08**)
+* **Validación**: `class-validator` y `class-transformer` (`whitelist: true`, `forbidNonWhitelisted: true`)
+* **Documentación**: Swagger / OpenAPI en `/api/v1/swagger-ui` (solo en desarrollo)
 
 ---
 
-## ⚙️ Configuración y Variables de Entorno
+## ⚙️ Variables de Entorno
 
-El archivo [`src/main/resources/application.yml`](src/main/resources/application.yml) viene listo para desarrollo local y producción:
+Copia `.env.example` a `.env` y completa tus credenciales locales (nunca subas `.env` a Git):
 
-| Variable | Valor por defecto | Descripción |
-|---|---|---|
-| `DB_URL` | `jdbc:postgresql://localhost:5432/arreglaloya_db` | URL de conexión PostgreSQL |
-| `DB_USERNAME` | `postgres` | Usuario de base de datos |
-| `DB_PASSWORD` | `postgres` | Contraseña |
-| `JWT_SECRET` | *(Clave de 256 bits predeterminada)* | Clave para firma de tokens JWT |
+```bash
+cp .env.example .env
+```
+
+Variables requeridas:
+
+```env
+PORT=8080
+NODE_ENV=development
+DB_HOST=localhost
+DB_PORT=5432
+DB_USERNAME=postgres
+DB_PASSWORD=TU_PASSWORD_DE_POSTGRES
+DB_DATABASE=postgres
+JWT_SECRET=TU_SECRETO_JWT_DE_AL_MENOS_32_CARACTERES
+JWT_EXPIRATION=86400s
+CORS_ORIGINS=http://localhost:4200,http://localhost:8080
+UPLOAD_DIR=uploads
+```
 
 ---
 
@@ -58,14 +53,23 @@ El archivo [`src/main/resources/application.yml`](src/main/resources/application
 Desde la carpeta `backend`:
 
 ```powershell
-# En Windows (con el Maven Wrapper incluido):
-.\mvnw.cmd spring-boot:run
+# Instalar dependencias (solo primera vez)
+npm install
+
+# Compilar TypeScript
+npm run build
+
+# Modo desarrollo con recarga automática (watch mode):
+npm run start:dev
+
+# O modo producción compilado:
+npm run start:prod
 ```
 
 ---
 
-## 📖 Documentación Interactiva (Swagger UI)
+## 📖 Documentación Swagger UI
 
-Con el backend en ejecución, abre en tu navegador:
+Con `NODE_ENV=development` y el servidor corriendo, abre en tu navegador:
 
-👉 **http://localhost:8080/api/v1/swagger-ui.html**
+👉 **http://localhost:8080/api/v1/swagger-ui**
