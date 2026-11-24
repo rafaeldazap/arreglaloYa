@@ -1,56 +1,75 @@
-# Backend — API REST (NestJS + TypeORM + PostgreSQL)
+# Backend - Arreglalo Ya 🛠️ (NestJS + TypeORM)
 
-## Cómo correrlo
+Backend oficial de la materia **Sistemas de Información I**, desarrollado con **NestJS (Node.js)** y **TypeORM**, conectado a **PostgreSQL**.
 
-En el Codespace, PostgreSQL ya está corriendo. En una terminal:
+*(Nota: La versión previa en Spring Boot quedó respaldada en `backend-spring-backup`).*
 
+---
+
+## 🚀 Tecnologías y Seguridad
+
+* **Node.js**: v20+ / v24 (LTS)
+* **Framework**: **NestJS v10** (TypeScript)
+* **ORM**: **TypeORM v0.3** + **PostgreSQL**
+* **Seguridad**:
+  * Passport.js + `@nestjs/jwt` (JWT Bearer Token) + `bcrypt`
+  * Control de acceso basado en roles (**RBAC**: `CLIENTE`, `TRABAJADOR`, `ADMIN`) y propiedad por recurso (anti-IDOR)
+  * `helmet` + CORS por lista blanca (`CORS_ORIGINS`) + `@nestjs/throttler` (rate limiting)
+  * Serialización segura (`select: false` + `@Exclude()` en `passwordHash`, filtro global de excepciones)
+  * `@nestjs/schedule` para caducidad automática a los 30 días (**RN-08**)
+* **Validación**: `class-validator` y `class-transformer` (`whitelist: true`, `forbidNonWhitelisted: true`)
+* **Documentación**: Swagger / OpenAPI en `/api/v1/swagger-ui` (solo en desarrollo)
+
+---
+
+## ⚙️ Variables de Entorno
+
+Copia `.env.example` a `.env` y completa tus credenciales locales (nunca subas `.env` a Git):
+
+```bash
+cp .env.example .env
 ```
-cd backend
+
+Variables requeridas:
+
+```env
+PORT=8080
+NODE_ENV=development
+DB_HOST=localhost
+DB_PORT=5432
+DB_USERNAME=postgres
+DB_PASSWORD=TU_PASSWORD_DE_POSTGRES
+DB_DATABASE=postgres
+JWT_SECRET=TU_SECRETO_JWT_DE_AL_MENOS_32_CARACTERES
+JWT_EXPIRATION=86400s
+CORS_ORIGINS=http://localhost:4200,http://localhost:8080
+UPLOAD_DIR=uploads
+```
+
+---
+
+## 🏃‍♂️ Cómo Ejecutar
+
+Desde la carpeta `backend`:
+
+```powershell
+# Instalar dependencias (solo primera vez)
+npm install
+
+# Compilar TypeScript
+npm run build
+
+# Modo desarrollo con recarga automática (watch mode):
 npm run start:dev
+
+# O modo producción compilado:
+npm run start:prod
 ```
 
-La API queda en `http://localhost:3000/api`. Al arrancar, TypeORM crea las tablas solo (`synchronize: true`, solo para desarrollo) y carga las categorías y zonas iniciales.
+---
 
-## Estructura
+## 📖 Documentación Swagger UI
 
-```
-src/
-  main.ts                 Arranque: prefijo /api, validación de datos
-  app.module.ts           Conexión a PostgreSQL con TypeORM
-  entidades/              Las 12 entidades del diagrama de clases
-  auth/                   Registro, inicio de sesión y token JWT
-  catalogos/              Categorías y zonas
-```
+Con `NODE_ENV=development` y el servidor corriendo, abre en tu navegador:
 
-## Endpoints
-
-| Método | Ruta | Qué hace | Requiere token |
-|---|---|---|---|
-| POST | /api/auth/registro | Registra cliente o trabajador (el trabajador queda EN REVISIÓN) | No |
-| POST | /api/auth/login | Inicia sesión y devuelve el token JWT | No |
-| GET | /api/auth/perfil | Datos del usuario que inició sesión | Sí |
-| GET | /api/categorias | Lista de categorías activas | No |
-| GET | /api/zonas | Lista de zonas activas | No |
-
-Ejemplo de registro:
-
-```json
-POST /api/auth/registro
-{
-  "nombre": "Juan Mamani",
-  "correo": "juan@gmail.com",
-  "password": "123456",
-  "rol": "TRABAJADOR",
-  "ci": "1234567",
-  "especialidades": ["Plomería"],
-  "zonas": ["Centro", "Sarco"]
-}
-```
-
-## Seguridad
-
-- Las contraseñas se guardan cifradas con bcrypt (nunca en texto plano).
-- El token JWT dura 8 horas y se envía en el encabezado `Authorization: Bearer <token>`.
-- Las cuentas suspendidas o bloqueadas no pueden iniciar sesión.
-
-`base_de_datos.sql` es el script del modelo para revisarlo directamente en PostgreSQL.
+👉 **http://localhost:8080/api/v1/swagger-ui**

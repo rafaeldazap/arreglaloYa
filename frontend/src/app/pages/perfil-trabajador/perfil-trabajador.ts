@@ -1,6 +1,5 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, computed, inject } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { Trabajador } from '../../models';
 import { DatosService } from '../../services/datos.service';
 
 @Component({
@@ -9,15 +8,12 @@ import { DatosService } from '../../services/datos.service';
   templateUrl: './perfil-trabajador.html',
   styleUrl: './perfil-trabajador.css',
 })
-export class PerfilTrabajador implements OnInit {
+export class PerfilTrabajador {
   private datos = inject(DatosService);
   private ruta = inject(ActivatedRoute);
-  trabajador?: Trabajador;
-
-  ngOnInit() {
-    const id = Number(this.ruta.snapshot.paramMap.get('id'));
-    this.trabajador = this.datos.obtenerTrabajador(id);
-  }
+  private id = Number(this.ruta.snapshot.paramMap.get('id'));
+  // computed: si los datos llegan después desde el backend, la pantalla se actualiza sola
+  trabajador = computed(() => this.datos.obtenerTrabajador(this.id));
 
   estrellas(n: number): string {
     return '★'.repeat(Math.round(n)) + '☆'.repeat(5 - Math.round(n));

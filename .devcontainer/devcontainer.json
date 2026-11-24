@@ -3,10 +3,10 @@
   "dockerComposeFile": "docker-compose.yml",
   "service": "app",
   "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
-  "postCreateCommand": "cd frontend && npm install && npx ng analytics disable --global && cd ../backend && npm install",
-  "forwardPorts": [4200, 3000],
+  "postCreateCommand": "sudo apt-get update -q && sudo apt-get install -y -q postgresql-client; cd frontend && npm install && npx ng analytics disable --global && cd ../backend && npm install",
+  "forwardPorts": [4200, 8080],
   "portsAttributes": {
     "4200": { "label": "Frontend Angular", "onAutoForward": "openPreview" },
-    "3000": { "label": "Backend NestJS" }
+    "8080": { "label": "Backend NestJS" }
   }
 }

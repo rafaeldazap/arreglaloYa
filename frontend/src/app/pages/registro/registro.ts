@@ -48,7 +48,13 @@ export class Registro {
         telefono: this.telefono,
         password: this.password,
         rol: this.rol === 'TRABAJADOR' ? 'TRABAJADOR' : 'CLIENTE',
-        ...(this.rol === 'TRABAJADOR' && { ci: this.ci, especialidades: this.especialidades, zonas: this.zonas }),
+        ...(this.rol === 'TRABAJADOR' && {
+          ci: this.ci,
+          especialidades: this.especialidades,
+          zonas: this.zonas,
+          categoriasIds: this.datos.idsCategorias(this.especialidades),
+          zonasIds: this.datos.idsZonas(this.zonas),
+        }),
       })
       .subscribe({
         next: () => {

@@ -60,38 +60,39 @@ export class MisPedidos {
     return p.pagos.find((pg) => pg.tipo === 'SALDO_75');
   }
 
-  pagarYAceptar(p: Pedido, cotizacionId: number) {
-    const error = this.datos.aceptarCotizacion(p.id, cotizacionId);
+  async pagarYAceptar(p: Pedido, cotizacionId: number) {
+    const error = await this.datos.aceptarCotizacion(p.id, cotizacionId);
     if (error) this.error.set(error);
     else this.panel.set(null);
   }
 
-  cancelar(p: Pedido) {
-    this.datos.cancelarPedido(p.id);
+  async cancelar(p: Pedido) {
     this.panel.set(null);
+    await this.datos.cancelarPedido(p.id);
   }
 
   firmarConformidad(p: Pedido) {
     this.datos.confirmarConformidad(p.id, this.medioPago);
   }
 
-  calificar(p: Pedido) {
+  async calificar(p: Pedido) {
     if (this.puntaje() === 0) {
       this.error.set('Elige de 1 a 5 estrellas.');
       return;
     }
-    this.datos.calificar(p.id, this.puntaje(), this.comentario.trim());
+    await this.datos.calificar(p.id, this.puntaje(), this.comentario.trim());
     this.puntaje.set(0);
     this.comentario = '';
     this.error.set('');
   }
 
-  enviarReclamo(p: Pedido) {
+  async enviarReclamo(p: Pedido) {
     if (this.descripcionReclamo.trim().length < 10) {
       this.error.set('Describe el problema con al menos 10 caracteres.');
       return;
     }
-    this.datos.reclamar(p.id, this.motivo, this.descripcionReclamo.trim());
+    const error = await this.datos.reclamar(p.id, this.motivo, this.descripcionReclamo.trim());
+    if (error) return;
     this.descripcionReclamo = '';
     this.panel.set(null);
   }

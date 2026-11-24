@@ -22,7 +22,9 @@ backend/    API REST NestJS
 
 ## Cómo correr el proyecto
 
-Sin instalar nada: en GitHub, botón **Code → Codespaces → Create codespace on main**. El Codespace trae Node.js 24 y PostgreSQL 16 listos.
+### Opción A: GitHub Codespaces (sin instalar nada)
+
+En GitHub: **Code → Codespaces → Create codespace on main**. Trae Node.js 24 y PostgreSQL 16 listos, y las variables del backend ya configuradas (no hace falta `.env`).
 
 Terminal 1 (backend):
 
@@ -31,6 +33,8 @@ cd backend
 npm run start:dev
 ```
 
+Debe aparecer `Nest application successfully started` y `Backend Arreglalo Ya corriendo en: http://localhost:8080/api/v1`.
+
 Terminal 2 (frontend):
 
 ```
@@ -38,49 +42,66 @@ cd frontend
 npm start
 ```
 
-Luego abrir el puerto 4200 (pestaña Puertos). El frontend envía las peticiones `/api` al backend mediante `frontend/proxy.conf.json`.
+Abrir el puerto **4200** (pestaña Puertos). El frontend manda todo lo que empieza con `/api` al backend (puerto 8080) mediante `frontend/proxy.conf.json`.
+
+> Si el Codespace se creó antes de este cambio: **Ctrl+Shift+P → Codespaces: Rebuild Container**.
+
+### Opción B: en la computadora (Windows)
+
+1. Instalar Node.js 24 y PostgreSQL 16.
+2. `cd backend`, copiar `.env.example` a `.env` y poner la contraseña de PostgreSQL.
+3. `npm install` y `npm run start:dev` en `backend`; `npm install` y `npm start` en `frontend`.
+4. Abrir http://localhost:4200
+
+### Cuentas de prueba
+
+Se crean solas la primera vez que arranca el backend (contraseña `123456`):
+
+| Correo | Rol |
+|---|---|
+| cliente@demo.com | Cliente |
+| trabajador@demo.com | Trabajador (plomería: Centro, Cala Cala, Sarco) |
+| admin@demo.com | Administrador |
+
+Documentación de la API (Swagger): http://localhost:8080/api/v1/swagger-ui
+
+### Ver la base de datos
+
+En el Codespace: `psql -h db -U postgres arreglaloya` (contraseña `postgres`), luego por ejemplo `select * from usuario;`.
 
 ## Avance actual
 
-**Backend (NestJS)**
-- Conexión a PostgreSQL con TypeORM y las 12 entidades del diagrama de clases
-- Registro de cliente y trabajador (el trabajador queda en revisión), con contraseñas cifradas con bcrypt
-- Inicio de sesión con token JWT
-- Catálogo de categorías y zonas
+**Backend (NestJS + TypeORM + PostgreSQL)** — prefijo `/api/v1`, puerto 8080
+- 12 entidades, validación de datos, JWT, roles (cliente, trabajador, administrador), Swagger
+- Registro e inicio de sesión; el trabajador queda en revisión hasta que el administrador lo apruebe
+- Solicitudes, cotizaciones con control de cruce de horarios (RN-10), pagos con anticipo del 25% y doble firma, calificaciones, reclamos con sanción, categorías y zonas, caducidad a los 30 días (RN-08)
+- Módulo `panel`: junta en una sola respuesta los datos que cada pantalla necesita y crea las cuentas de prueba
 
-**Frontend (Angular)**
-- Inicio de sesión y registro conectados a la API; menú y rutas protegidas según el rol (cliente, trabajador, administrador)
-- Cliente: buscar trabajadores, ver perfiles, publicar solicitud con fotos, recibir cotizaciones, aceptar y pagar el anticipo del 25% (simulado), firmar conformidad y pago del saldo, calificar, reclamar y cancelar (RN-12)
-- Trabajador: ver pedidos de su zona y especialidad, cotizar (con control de cruce de horarios), iniciar y terminar trabajos, confirmar el pago recibido, agenda y perfil
+**Frontend (Angular)** — conectado al backend en todas las pantallas
+- Cliente: buscar trabajadores, ver perfiles, publicar solicitud con fotos, recibir cotizaciones, aceptar y pagar el anticipo (simulado), firmar conformidad y pago del saldo, calificar, reclamar y cancelar (RN-12)
+- Trabajador: pedidos de su zona y especialidad, cotizar, iniciar y terminar trabajos, confirmar el pago recibido, agenda y perfil
 - Administrador: aprobar o rechazar trabajadores, administrar categorías y zonas, resolver reclamos y ver reportes
-- Todo lo que no es inicio de sesión usa datos de prueba en `frontend/src/app/services/datos.service.ts`
 
-**Versión demo:** `docs/index.html` (GitHub Pages), funciona sin backend. Cuentas de prueba con contraseña `123456`: `cliente@demo.com`, `trabajador@demo.com`, `admin@demo.com`.
+**Versión demo:** `docs/index.html` (GitHub Pages) funciona sin backend con datos de prueba (`npm run build -- --configuration demo`).
 
-## Endpoints que necesita el frontend (pendientes en el backend)
+## Cómo se conectan
 
-Cada método de `datos.service.ts` se reemplaza por una de estas llamadas:
-
-| Método del frontend | Endpoint |
+| Acción en la pantalla | Endpoint |
 |---|---|
-| obtenerTrabajadores | GET /api/trabajadores?zona=&categoria= |
-| obtenerTrabajador | GET /api/trabajadores/:id |
-| crearPedido | POST /api/solicitudes (con fotos) |
-| pedidos del cliente | GET /api/solicitudes/mias |
-| pedidosDisponibles | GET /api/solicitudes/disponibles (trabajador) |
-| enviarCotizacion | POST /api/solicitudes/:id/cotizaciones |
-| aceptarCotizacion | POST /api/cotizaciones/:id/aceptar |
-| rechazarCotizacion | POST /api/cotizaciones/:id/rechazar |
-| cancelarPedido | POST /api/solicitudes/:id/cancelar |
-| iniciarServicio / marcarTerminado | PATCH /api/solicitudes/:id/estado |
-| confirmarConformidad / confirmarRecepcionPago | POST /api/solicitudes/:id/pagos |
-| calificar | POST /api/solicitudes/:id/calificacion |
-| reclamar | POST /api/solicitudes/:id/reclamo |
-| agendaDe | GET /api/trabajadores/:id/agenda |
-| aprobarTrabajador / rechazarTrabajador | PATCH /api/admin/trabajadores/:id |
-| agregarCatalogo / alternarCatalogo | POST y PATCH /api/categorias, /api/zonas |
-| resolverReclamo | PATCH /api/admin/reclamos/:id |
-| reportes | GET /api/admin/reportes |
+| Iniciar sesión / registrarse | POST /api/v1/auth/login, /auth/registro-cliente, /auth/registro-trabajador |
+| Categorías y zonas | GET /api/v1/categorias, /zonas (admin: POST y PATCH .../activar, .../desactivar) |
+| Trabajadores y perfiles | GET /api/v1/panel/trabajadores (admin: /panel/trabajadores/todos) |
+| Pedidos de cada usuario | GET /api/v1/panel/pedidos |
+| Publicar solicitud | POST /api/v1/solicitudes |
+| Cancelar | PATCH /api/v1/solicitudes/:id/cancelar |
+| Cotizar | POST /api/v1/cotizaciones |
+| Aceptar / rechazar cotización | PATCH /api/v1/cotizaciones/:id/responder?estado=ACEPTADA o RECHAZADA |
+| Pagar anticipo / saldo | POST /api/v1/pagos |
+| Trabajador confirma el pago | PATCH /api/v1/pagos/:id/confirmar |
+| Iniciar / terminar servicio | PATCH /api/v1/panel/pedidos/:id/iniciar, .../terminar |
+| Calificar | POST /api/v1/calificaciones |
+| Reclamar / resolver | POST /api/v1/reclamos, PATCH /api/v1/reclamos/:id/resolver |
+| Aprobar o rechazar trabajador | PATCH /api/v1/trabajadores/:id/verificar |
 
 ## Equipo
 

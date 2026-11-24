@@ -23,7 +23,7 @@ export class PanelTrabajador {
   pestana = signal<Pestana>('disponibles');
 
   // El perfil del trabajador que inició sesión
-  trabajador = computed(() => this.datos.trabajadorPorCorreo(this.auth.usuario()?.correo ?? ''));
+  trabajador = computed(() => this.datos.miPerfil(this.auth.usuario()));
   enRevision = computed(() => this.auth.usuario()?.estadoCuenta === 'REVISION' || this.trabajador()?.estado === 'REVISION');
 
   disponibles = computed(() => (this.trabajador() ? this.datos.pedidosDisponibles(this.trabajador()!) : []));
@@ -54,8 +54,8 @@ export class PanelTrabajador {
     this.duracionHoras = 2;
   }
 
-  enviarCotizacion(p: Pedido) {
-    const error = this.datos.enviarCotizacion(p.id, this.trabajador()!, {
+  async enviarCotizacion(p: Pedido) {
+    const error = await this.datos.enviarCotizacion(p.id, this.trabajador()!, {
       requiereVisita: this.requiereVisita,
       costoVisita: this.requiereVisita ? this.costoVisita : 0,
       monto: this.monto ?? 0,

@@ -1,12 +1,29 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { inject, Injectable, signal } from '@angular/core';
-import { Observable, of, tap, throwError } from 'rxjs';
+import { map, Observable, of, tap, throwError } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { Usuario } from '../models';
 
 interface RespuestaAuth {
   token: string;
   usuario: Usuario;
+}
+
+// Lo que devuelve el backend al iniciar sesión o registrarse
+interface RespuestaApi {
+  token: string;
+  idUsuario: number;
+  nombreCompleto: string;
+  correo: string;
+  rol: Usuario['rol'];
+  estadoCuenta: Usuario['estadoCuenta'];
+}
+
+function aRespuesta(r: RespuestaApi): RespuestaAuth {
+  return {
+    token: r.token,
+    usuario: { id: r.idUsuario, nombre: r.nombreCompleto, correo: r.correo, rol: r.rol, estadoCuenta: r.estadoCuenta },
+  };
 }
 
 export interface DatosRegistro {
@@ -16,6 +33,9 @@ export interface DatosRegistro {
   password: string;
   rol: 'CLIENTE' | 'TRABAJADOR';
   ci?: string;
+  categoriasIds?: number[];
+  zonasIds?: number[];
+  // Solo para la demo
   especialidades?: string[];
   zonas?: string[];
 }
@@ -23,7 +43,7 @@ export interface DatosRegistro {
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private http = inject(HttpClient);
-  private api = '/api/auth';
+  private api = `${environment.api}/auth`;
 
   usuario = signal<Usuario | null>(this.usuarioGuardado());
 
@@ -31,9 +51,10 @@ export class AuthService {
     if (environment.demo) {
       return this.demo(correo.split('@')[0], correo, 'CLIENTE', password).pipe(tap((r) => this.guardarSesion(r)));
     }
-    return this.http
-      .post<RespuestaAuth>(`${this.api}/login`, { correo, password })
-      .pipe(tap((r) => this.guardarSesion(r)));
+    return this.http.post<RespuestaApi>(`${this.api}/login`, { correo, password }).pipe(
+      map(aRespuesta),
+      tap((r) => this.guardarSesion(r)),
+    );
   }
 
   registrar(datos: DatosRegistro): Observable<RespuestaAuth> {
@@ -44,7 +65,23 @@ export class AuthService {
         }),
       );
     }
-    return this.http.post<RespuestaAuth>(`${this.api}/registro`, datos).pipe(
+    const base = {
+      nombreCompleto: datos.nombre,
+      correo: datos.correo,
+      password: datos.password,
+      ...(datos.telefono && { telefono: datos.telefono }),
+    };
+    const peticion =
+      datos.rol === 'TRABAJADOR'
+        ? this.http.post<RespuestaApi>(`${this.api}/registro-trabajador`, {
+            ...base,
+            ciNumero: datos.ci,
+            categoriasIds: datos.categoriasIds,
+            zonasIds: datos.zonasIds,
+          })
+        : this.http.post<RespuestaApi>(`${this.api}/registro-cliente`, base);
+    return peticion.pipe(
+      map(aRespuesta),
       tap((r) => {
         // El trabajador queda en revisión: no inicia sesión hasta ser aprobado
         if (datos.rol === 'CLIENTE') this.guardarSesion(r);

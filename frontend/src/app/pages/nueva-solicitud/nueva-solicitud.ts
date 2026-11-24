@@ -17,6 +17,7 @@ export class NuevaSolicitud implements OnInit {
   private router = inject(Router);
 
   trabajador = '';
+  trabajadorId?: number;
   categoria = '';
   descripcion = '';
   zona = '';
@@ -31,6 +32,7 @@ export class NuevaSolicitud implements OnInit {
     const t = this.datos.obtenerTrabajador(id);
     if (t) {
       this.trabajador = t.nombre;
+      this.trabajadorId = t.id;
       this.categoria = t.especialidades[0];
     }
   }
@@ -43,9 +45,7 @@ export class NuevaSolicitud implements OnInit {
         this.error.set('Puedes subir como máximo 5 fotos.');
         break;
       }
-      const lector = new FileReader();
-      lector.onload = () => this.fotos.update((lista) => [...lista, lector.result as string]);
-      lector.readAsDataURL(archivo);
+      achicarFoto(archivo).then((foto) => this.fotos.update((lista) => (lista.length < 5 ? [...lista, foto] : lista)));
     }
   }
 
@@ -53,7 +53,7 @@ export class NuevaSolicitud implements OnInit {
     this.fotos.update((lista) => lista.filter((_, j) => j !== i));
   }
 
-  publicar() {
+  async publicar() {
     if (!this.categoria || !this.descripcion || !this.zona || !this.direccion || !this.fecha) {
       this.error.set('Completa la categoría, la descripción, la zona, la dirección y la fecha.');
       return;
@@ -62,7 +62,7 @@ export class NuevaSolicitud implements OnInit {
       this.error.set('Sube al menos una foto del problema.');
       return;
     }
-    this.datos.crearPedido({
+    const error = await this.datos.crearPedido({
       cliente: this.auth.usuario()!.nombre,
       categoria: this.categoria,
       descripcion: this.descripcion,
@@ -72,7 +72,31 @@ export class NuevaSolicitud implements OnInit {
       montoOfrecido: this.montoOfrecido ?? 0,
       fotos: this.fotos(),
       trabajador: this.trabajador || undefined,
+      trabajadorId: this.trabajadorId,
     });
-    this.router.navigate(['/mis-pedidos']);
+    if (error) this.error.set(error);
+    else this.router.navigate(['/mis-pedidos']);
   }
+}
+
+// Reduce la foto a máximo 800 px y la convierte a JPEG (≈ 50-100 KB) para enviarla al backend
+function achicarFoto(archivo: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const lector = new FileReader();
+    lector.onerror = reject;
+    lector.onload = () => {
+      const img = new Image();
+      img.onerror = reject;
+      img.onload = () => {
+        const escala = Math.min(1, 800 / Math.max(img.width, img.height));
+        const lienzo = document.createElement('canvas');
+        lienzo.width = Math.round(img.width * escala);
+        lienzo.height = Math.round(img.height * escala);
+        lienzo.getContext('2d')!.drawImage(img, 0, 0, lienzo.width, lienzo.height);
+        resolve(lienzo.toDataURL('image/jpeg', 0.7));
+      };
+      img.src = lector.result as string;
+    };
+    lector.readAsDataURL(archivo);
+  });
 }

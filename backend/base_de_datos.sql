@@ -81,7 +81,7 @@ CREATE TABLE solicitud_servicio (
 CREATE TABLE foto_solicitud (
     id_foto SERIAL PRIMARY KEY,
     id_solicitud INTEGER NOT NULL REFERENCES solicitud_servicio(id_solicitud),
-    url_foto VARCHAR(255) NOT NULL,
+    url_foto TEXT NOT NULL,
     fecha_carga TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -95,7 +95,9 @@ CREATE TABLE cotizacion (
     incluye_materiales BOOLEAN NOT NULL DEFAULT FALSE,
     es_recotizacion BOOLEAN NOT NULL DEFAULT FALSE,
     estado_aprobacion VARCHAR(15) NOT NULL DEFAULT 'PENDIENTE'
-        CHECK (estado_aprobacion IN ('PENDIENTE', 'ACEPTADA', 'RECHAZADA'))
+        CHECK (estado_aprobacion IN ('PENDIENTE', 'ACEPTADA', 'RECHAZADA')),
+    fecha_inicio_propuesta TIMESTAMPTZ,
+    duracion_min INTEGER
 );
 
 CREATE TABLE transaccion_pago (
@@ -116,6 +118,7 @@ CREATE TABLE reclamo_sancion (
     id_denunciante INTEGER NOT NULL REFERENCES usuario(id_usuario),
     id_denunciado INTEGER NOT NULL REFERENCES usuario(id_usuario),
     motivo VARCHAR(25) NOT NULL CHECK (motivo IN ('INASISTENCIA', 'MAL_ARREGLO', 'INCUMPLIMIENTO_PAGO', 'ROBO')),
+    descripcion TEXT,
     url_pruebas VARCHAR(255),
     estado_resolucion VARCHAR(15) NOT NULL DEFAULT 'EN_REVISION'
         CHECK (estado_resolucion IN ('EN_REVISION', 'PROCEDENTE', 'IMPROCEDENTE')),

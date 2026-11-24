@@ -1,16 +1,15 @@
-import { computed, Injectable, signal } from '@angular/core';
-import { Catalogo, Cotizacion, MotivoReclamo, Pago, Pedido, Trabajador } from '../models';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { computed, effect, inject, Injectable, signal, untracked } from '@angular/core';
+import { firstValueFrom } from 'rxjs';
+import { environment } from '../../environments/environment';
+import { Catalogo, Cotizacion, EstadoPedido, MotivoReclamo, Pago, Pedido, Trabajador, Usuario } from '../models';
+import { AuthService } from './auth.service';
+import { categoriasDemo, pedidosDemo, trabajadoresDemo, zonasDemo } from './datos-demo';
 
-// Datos de prueba. Cuando el backend (NestJS) tenga cada endpoint,
-// el método correspondiente se cambia por una llamada HTTP a la API REST.
-// Las pantallas no cambian: solo usan los métodos de este servicio.
-
-// Fecha y hora a partir de hoy, en el formato de <input type="datetime-local">
-function dia(offset: number, hora = '09:00'): string {
-  const d = new Date();
-  d.setDate(d.getDate() + offset);
-  return `${d.toISOString().slice(0, 10)}T${hora}`;
-}
+// Todas las pantallas leen y cambian los datos SOLO a través de este servicio.
+// - Versión conectada (npm start): cada acción llama a la API REST del backend NestJS
+//   (/api/v1/...) y después vuelve a pedir los datos para que la pantalla se actualice.
+// - Versión demo (GitHub Pages): los mismos métodos trabajan con datos de prueba en memoria.
 
 function ahora(): string {
   return new Date().toLocaleString('es-BO');
@@ -18,16 +17,17 @@ function ahora(): string {
 
 @Injectable({ providedIn: 'root' })
 export class DatosService {
-  private listaCategorias = signal<Catalogo[]>(
-    ['Plomería', 'Electricidad', 'Albañilería', 'Electrodomésticos'].map((nombre) => ({ nombre, activa: true })),
-  );
+  private http = inject(HttpClient);
+  private auth = inject(AuthService);
+  private api = environment.api;
+  esDemo = environment.demo;
 
-  private listaZonas = signal<Catalogo[]>(
-    ['Centro', 'Cala Cala', 'Queru Queru', 'Sarco', 'Hipódromo', 'Sacaba', 'Quillacollo', 'Tiquipaya'].map((nombre) => ({
-      nombre,
-      activa: true,
-    })),
-  );
+  cargando = signal(false);
+  // Último error que devolvió el servidor (se muestra como aviso en la parte superior)
+  errorApi = signal('');
+
+  private listaCategorias = signal<Catalogo[]>(this.esDemo ? categoriasDemo.map((nombre) => ({ nombre, activa: true })) : []);
+  private listaZonas = signal<Catalogo[]>(this.esDemo ? zonasDemo.map((nombre) => ({ nombre, activa: true })) : []);
 
   // Solo las activas aparecen en buscadores y formularios
   categorias = computed(() => this.listaCategorias().filter((c) => c.activa).map((c) => c.nombre));
@@ -35,123 +35,92 @@ export class DatosService {
   todasCategorias = this.listaCategorias.asReadonly();
   todasZonas = this.listaZonas.asReadonly();
 
-  trabajadores = signal<Trabajador[]>([
-    {
-      id: 1, nombre: 'Juan Mamani', correo: 'trabajador@demo.com', ci: '4567891', especialidades: ['Plomería'],
-      zonas: ['Centro', 'Cala Cala', 'Sarco'], experiencia: '8 años arreglando cañerías, tanques de agua y calefones.',
-      estado: 'ACTIVO', documentos: ['CI.pdf', 'Antecedentes.pdf'], promedio: 4.8, trabajosRealizados: 56,
-      opiniones: [
-        { cliente: 'María L.', puntaje: 5, comentario: 'Llegó puntual y dejó todo limpio.', fecha: '2026-10-28' },
-        { cliente: 'Carlos R.', puntaje: 4, comentario: 'Buen trabajo, un poco caro.', fecha: '2026-10-12' },
-      ],
-    },
-    {
-      id: 2, nombre: 'Rosa Quispe', correo: 'rosa@demo.com', ci: '5678912', especialidades: ['Electricidad'],
-      zonas: ['Queru Queru', 'Hipódromo', 'Centro'], experiencia: 'Instalaciones eléctricas domiciliarias y tableros.',
-      estado: 'ACTIVO', documentos: ['CI.pdf', 'Antecedentes.pdf', 'Certificado_INFOCAL.pdf'], promedio: 4.9, trabajosRealizados: 41,
-      opiniones: [{ cliente: 'Andrés P.', puntaje: 5, comentario: 'Explicó todo lo que hizo. Muy recomendada.', fecha: '2026-10-30' }],
-    },
-    {
-      id: 3, nombre: 'Pedro Choque', correo: 'pedro@demo.com', ci: '6789123', especialidades: ['Albañilería'],
-      zonas: ['Sacaba', 'Quillacollo'], experiencia: 'Muros, revoques, cerámica y pequeñas ampliaciones.',
-      estado: 'ACTIVO', documentos: ['CI.pdf', 'Antecedentes.pdf'], promedio: 4.5, trabajosRealizados: 23,
-      opiniones: [{ cliente: 'Lucía V.', puntaje: 4, comentario: 'Cumplió con lo acordado.', fecha: '2026-09-20' }],
-    },
-    {
-      id: 4, nombre: 'Miguel Torrez', correo: 'miguel@demo.com', ci: '7891234', especialidades: ['Electrodomésticos', 'Electricidad'],
-      zonas: ['Cala Cala', 'Tiquipaya'], experiencia: 'Reparación de lavadoras, refrigeradores y cocinas.',
-      estado: 'ACTIVO', documentos: ['CI.pdf', 'Antecedentes.pdf'], promedio: 4.6, trabajosRealizados: 37,
-      opiniones: [{ cliente: 'Jorge M.', puntaje: 5, comentario: 'Mi refrigerador quedó como nuevo.', fecha: '2026-10-05' }],
-    },
-    {
-      id: 5, nombre: 'Ana Rojas', correo: 'ana@demo.com', ci: '8912345', especialidades: ['Plomería', 'Albañilería'],
-      zonas: ['Quillacollo', 'Tiquipaya', 'Sarco'], experiencia: 'Baños y cocinas: instalación y reparación.',
-      estado: 'ACTIVO', documentos: ['CI.pdf', 'Antecedentes.pdf'], promedio: 4.3, trabajosRealizados: 18, opiniones: [],
-    },
-    {
-      id: 6, nombre: 'Luis Vargas', correo: 'luis@demo.com', ci: '9123456', especialidades: ['Electricidad'],
-      zonas: ['Sarco', 'Centro'], experiencia: '3 años como ayudante de electricista.',
-      estado: 'REVISION', documentos: ['CI.pdf', 'Antecedentes.pdf', 'Carta_recomendacion.pdf'], promedio: 0, trabajosRealizados: 0, opiniones: [],
-    },
-    {
-      id: 7, nombre: 'Carla Medina', correo: 'carla@demo.com', ci: '9234567', especialidades: ['Electrodomésticos'],
-      zonas: ['Hipódromo', 'Queru Queru'], experiencia: 'Técnica en refrigeración.',
-      estado: 'REVISION', documentos: ['CI.pdf'], promedio: 0, trabajosRealizados: 0, opiniones: [],
-    },
-  ]);
-
+  trabajadores = signal<Trabajador[]>(this.esDemo ? trabajadoresDemo : []);
   trabajadoresActivos = computed(() => this.trabajadores().filter((t) => t.estado === 'ACTIVO'));
   trabajadoresEnRevision = computed(() => this.trabajadores().filter((t) => t.estado === 'REVISION'));
 
-  pedidos = signal<Pedido[]>([
-    {
-      id: 101, cliente: 'María López', categoria: 'Plomería', descripcion: 'Fuga de agua debajo del lavaplatos.',
-      zona: 'Cala Cala', direccion: 'Av. América #123', fecha: dia(-1).slice(0, 10), montoOfrecido: 150, fotos: [],
-      estado: 'EN_PROCESO', trabajadorId: 1, trabajador: 'Juan Mamani', trabajoTerminado: false,
-      cotizaciones: [
-        { id: 1, trabajadorId: 1, trabajador: 'Juan Mamani', requiereVisita: false, costoVisita: 0, monto: 180,
-          incluyeMateriales: true, fechaInicio: dia(0, '10:00'), duracionHoras: 3, estado: 'ACEPTADA' },
-      ],
-      pagos: [{ tipo: 'ANTICIPO_25', medio: 'PASARELA_APP', monto: 45, confirmadoCliente: true, confirmadoTrabajador: true }],
-      historial: [
-        { fecha: '03/11/2026 09:12', descripcion: 'Solicitud publicada' },
-        { fecha: '03/11/2026 11:40', descripcion: 'Juan Mamani envió una cotización de Bs 180' },
-        { fecha: '03/11/2026 12:05', descripcion: 'Cotización aceptada y anticipo de Bs 45 pagado' },
-        { fecha: '05/11/2026 10:00', descripcion: 'El trabajador inició el servicio' },
-      ],
-    },
-    {
-      id: 102, cliente: 'María López', categoria: 'Electricidad', descripcion: 'Instalar dos tomacorrientes en el dormitorio.',
-      zona: 'Queru Queru', direccion: 'Calle Tumusla #45', fecha: dia(3).slice(0, 10), montoOfrecido: 100, fotos: [],
-      estado: 'PENDIENTE', trabajoTerminado: false, pagos: [],
-      cotizaciones: [
-        { id: 2, trabajadorId: 2, trabajador: 'Rosa Quispe', requiereVisita: true, costoVisita: 20, monto: 120,
-          incluyeMateriales: false, fechaInicio: dia(3, '15:00'), duracionHoras: 2, estado: 'PENDIENTE' },
-      ],
-      historial: [
-        { fecha: '05/11/2026 08:30', descripcion: 'Solicitud publicada' },
-        { fecha: '05/11/2026 14:10', descripcion: 'Rosa Quispe envió una cotización de Bs 120 + visita Bs 20' },
-      ],
-    },
-    {
-      id: 103, cliente: 'María López', categoria: 'Plomería', descripcion: 'Cambiar la llave de paso del baño.',
-      zona: 'Centro', direccion: 'Calle Jordán #210', fecha: dia(-10).slice(0, 10), montoOfrecido: 80, fotos: [],
-      estado: 'FINALIZADO', trabajadorId: 1, trabajador: 'Juan Mamani', trabajoTerminado: true,
-      cotizaciones: [
-        { id: 3, trabajadorId: 1, trabajador: 'Juan Mamani', requiereVisita: false, costoVisita: 0, monto: 90,
-          incluyeMateriales: true, fechaInicio: dia(-10, '09:00'), duracionHoras: 2, estado: 'ACEPTADA' },
-      ],
-      pagos: [
-        { tipo: 'ANTICIPO_25', medio: 'PASARELA_APP', monto: 23, confirmadoCliente: true, confirmadoTrabajador: true },
-        { tipo: 'SALDO_75', medio: 'QR_TRABAJADOR', monto: 67, confirmadoCliente: true, confirmadoTrabajador: true },
-      ],
-      historial: [
-        { fecha: '25/10/2026 08:00', descripcion: 'Solicitud publicada' },
-        { fecha: '25/10/2026 09:30', descripcion: 'Cotización aceptada y anticipo de Bs 23 pagado' },
-        { fecha: '27/10/2026 11:15', descripcion: 'Servicio finalizado y saldo de Bs 67 confirmado por ambas partes' },
-      ],
-    },
-    {
-      id: 104, cliente: 'Carlos Rocha', categoria: 'Plomería', descripcion: 'El tanque de agua rebalsa y no corta.',
-      zona: 'Sarco', direccion: 'Av. Melchor Pérez #890', fecha: dia(2).slice(0, 10), montoOfrecido: 120, fotos: [],
-      estado: 'PENDIENTE', trabajoTerminado: false, cotizaciones: [], pagos: [],
-      historial: [{ fecha: '06/11/2026 07:45', descripcion: 'Solicitud publicada' }],
-    },
-    {
-      id: 105, cliente: 'Lucía Vargas', categoria: 'Plomería', descripcion: 'Destapar la ducha.',
-      zona: 'Centro', direccion: 'Calle España #77', fecha: dia(1).slice(0, 10), montoOfrecido: 70, fotos: [],
-      estado: 'APROBADO', trabajadorId: 1, trabajador: 'Juan Mamani', trabajoTerminado: false,
-      cotizaciones: [
-        { id: 4, trabajadorId: 1, trabajador: 'Juan Mamani', requiereVisita: false, costoVisita: 0, monto: 80,
-          incluyeMateriales: false, fechaInicio: dia(1, '09:00'), duracionHoras: 2, estado: 'ACEPTADA' },
-      ],
-      pagos: [{ tipo: 'ANTICIPO_25', medio: 'PASARELA_APP', monto: 20, confirmadoCliente: true, confirmadoTrabajador: true }],
-      historial: [
-        { fecha: '06/11/2026 10:00', descripcion: 'Solicitud publicada' },
-        { fecha: '06/11/2026 12:20', descripcion: 'Cotización aceptada y anticipo de Bs 20 pagado' },
-      ],
-    },
-  ]);
+  pedidos = signal<Pedido[]>(this.esDemo ? pedidosDemo : []);
+
+  // Motivos de observación que escribió el admin en esta sesión (el backend no los guarda)
+  private motivosRechazo = new Map<number, string>();
+
+  constructor() {
+    if (!this.esDemo) {
+      // Cada vez que alguien inicia o cierra sesión se vuelven a pedir los datos al backend
+      effect(() => {
+        this.auth.usuario();
+        untracked(() => this.recargar());
+      });
+    }
+  }
+
+  // ---------- Conexión con el backend ----------
+
+  async recargar() {
+    if (this.esDemo) return;
+    const usuario = this.auth.usuario();
+    const admin = usuario?.rol === 'ADMIN';
+    this.cargando.set(true);
+    try {
+      const [categorias, zonas, trabajadores] = await Promise.all([
+        this.get<CatalogoApi[]>(admin ? '/categorias/todas' : '/categorias'),
+        this.get<CatalogoApi[]>(admin ? '/zonas/todas' : '/zonas'),
+        this.get<TrabajadorApi[]>(admin ? '/panel/trabajadores/todos' : '/panel/trabajadores'),
+      ]);
+      this.listaCategorias.set(categorias.map((c) => ({ id: c.idCategoria, nombre: c.nombre, activa: c.activa })));
+      this.listaZonas.set(zonas.map((z) => ({ id: z.idZona, nombre: z.nombre, activa: z.activa })));
+      this.trabajadores.set(trabajadores.map((t) => aTrabajador(t, this.motivosRechazo.get(t.idPerfil))));
+      const pedidos = usuario ? await this.get<PedidoApi[]>('/panel/pedidos') : [];
+      this.pedidos.set(pedidos.map(aPedido));
+    } catch (e) {
+      const err = e as HttpErrorResponse;
+      // Token vencido o inválido: se cierra la sesión
+      if (err.status === 401 && usuario) this.auth.cerrarSesion();
+      else this.errorApi.set(this.auth.mensajeError(err));
+    } finally {
+      this.cargando.set(false);
+    }
+  }
+
+  private get<T>(ruta: string) {
+    return firstValueFrom(this.http.get<T>(this.api + ruta));
+  }
+
+  // Ejecuta una o varias llamadas a la API, vuelve a cargar los datos y devuelve el error (o null)
+  private async accion(llamadas: () => Promise<unknown>, avisar = true): Promise<string | null> {
+    this.errorApi.set('');
+    try {
+      await llamadas();
+      await this.recargar();
+      return null;
+    } catch (e) {
+      const mensaje = this.auth.mensajeError(e as HttpErrorResponse);
+      if (avisar) this.errorApi.set(mensaje);
+      await this.recargar();
+      return mensaje;
+    }
+  }
+
+  private post(ruta: string, cuerpo: unknown = {}) {
+    return firstValueFrom(this.http.post(this.api + ruta, cuerpo));
+  }
+
+  private patch(ruta: string, cuerpo: unknown = {}) {
+    return firstValueFrom(this.http.patch(this.api + ruta, cuerpo));
+  }
+
+  private idCatalogo(tipo: 'categoria' | 'zona', nombre: string): number | undefined {
+    const lista = tipo === 'categoria' ? this.listaCategorias() : this.listaZonas();
+    return lista.find((x) => x.nombre === nombre)?.id;
+  }
+
+  idsCategorias(nombres: string[]): number[] {
+    return nombres.map((n) => this.idCatalogo('categoria', n)!).filter(Boolean);
+  }
+
+  idsZonas(nombres: string[]): number[] {
+    return nombres.map((n) => this.idCatalogo('zona', n)!).filter(Boolean);
+  }
 
   // ---------- Consultas ----------
 
@@ -167,6 +136,13 @@ export class DatosService {
 
   trabajadorPorCorreo(correo: string): Trabajador | undefined {
     return this.trabajadores().find((t) => t.correo === correo.toLowerCase());
+  }
+
+  // Perfil de trabajador del usuario que inició sesión
+  miPerfil(usuario: Usuario | null): Trabajador | undefined {
+    if (!usuario) return undefined;
+    if (this.esDemo) return this.trabajadorPorCorreo(usuario.correo);
+    return this.trabajadores().find((t) => t.idUsuario === usuario.id);
   }
 
   // Pedidos pendientes de su zona y especialidad que todavía no cotizó
@@ -185,7 +161,7 @@ export class DatosService {
   }
 
   trabajosDe(t: Trabajador): Pedido[] {
-    return this.pedidos().filter((p) => p.trabajadorId === t.id);
+    return this.pedidos().filter((p) => p.trabajadorId === t.id && p.estado !== 'PENDIENTE');
   }
 
   cotizacionAceptada(p: Pedido): Cotizacion | undefined {
@@ -196,8 +172,13 @@ export class DatosService {
     return c.monto + c.costoVisita;
   }
 
+  // 25% del total, redondeado a centavos (igual que el backend)
   anticipo(c: Cotizacion): number {
-    return Math.round(this.total(c) * 0.25);
+    return Math.round(this.total(c) * 25) / 100;
+  }
+
+  saldo(c: Cotizacion): number {
+    return Math.round((this.total(c) - this.anticipo(c)) * 100) / 100;
   }
 
   // Agenda del trabajador: trabajos aprobados o en proceso, ordenados por fecha
@@ -205,6 +186,7 @@ export class DatosService {
     return this.pedidos()
       .filter((p) => p.trabajadorId === trabajadorId && (p.estado === 'APROBADO' || p.estado === 'EN_PROCESO'))
       .map((p) => ({ pedido: p, cotizacion: this.cotizacionAceptada(p)! }))
+      .filter((a) => a.cotizacion)
       .sort((a, b) => a.cotizacion.fechaInicio.localeCompare(b.cotizacion.fechaInicio));
   }
 
@@ -240,9 +222,11 @@ export class DatosService {
     };
   });
 
+  pedidosConReclamo = computed(() => this.pedidos().filter((p) => p.reclamo));
+
   // ---------- Cliente ----------
 
-  crearPedido(datos: {
+  async crearPedido(datos: {
     cliente: string;
     categoria: string;
     descripcion: string;
@@ -252,7 +236,24 @@ export class DatosService {
     montoOfrecido: number;
     fotos: string[];
     trabajador?: string;
-  }) {
+    trabajadorId?: number;
+  }): Promise<string | null> {
+    if (!this.esDemo) {
+      return this.accion(
+        () =>
+          this.post('/solicitudes', {
+            idCategoria: this.idCatalogo('categoria', datos.categoria),
+            idZona: this.idCatalogo('zona', datos.zona),
+            descripcion: datos.descripcion,
+            direccionExacta: datos.direccion,
+            ...(datos.montoOfrecido > 0 && { montoOfrecido: datos.montoOfrecido }),
+            fotosUrls: datos.fotos,
+            fechaInicioAgendada: new Date(`${datos.fecha}T09:00`).toISOString(),
+            ...(datos.trabajadorId && { idTrabajador: datos.trabajadorId }),
+          }),
+        false,
+      );
+    }
     const historial = [{ fecha: ahora(), descripcion: 'Solicitud publicada' }];
     if (datos.trabajador) historial.push({ fecha: ahora(), descripcion: `Solicitud enviada a ${datos.trabajador}` });
     const nuevo: Pedido = {
@@ -272,15 +273,22 @@ export class DatosService {
       historial,
     };
     this.pedidos.update((lista) => [nuevo, ...lista]);
+    return null;
   }
 
   // Acepta una cotización y paga el anticipo del 25% (pasarela simulada)
-  aceptarCotizacion(pedidoId: number, cotizacionId: number): string | null {
+  async aceptarCotizacion(pedidoId: number, cotizacionId: number): Promise<string | null> {
     const p = this.buscarPedido(pedidoId);
     const c = p.cotizaciones.find((x) => x.id === cotizacionId)!;
     const cruce = this.hayCruce(c.trabajadorId, c.fechaInicio, c.duracionHoras, p.id);
     if (cruce) return `${c.trabajador} ya tiene otro trabajo en ese horario. Pídele otra fecha o elige otra cotización.`;
     const anticipo = this.anticipo(c);
+    if (!this.esDemo) {
+      return this.accion(async () => {
+        await this.patch(`/cotizaciones/${cotizacionId}/responder?estado=ACEPTADA`);
+        await this.post('/pagos', { idSolicitud: pedidoId, tipo: 'ANTICIPO_25', medioPago: 'PASARELA_APP', monto: anticipo });
+      }, false);
+    }
     this.actualizar(pedidoId, (x) => ({
       ...x,
       estado: 'APROBADO',
@@ -292,15 +300,18 @@ export class DatosService {
     return null;
   }
 
-  rechazarCotizacion(pedidoId: number, cotizacionId: number) {
+  async rechazarCotizacion(pedidoId: number, cotizacionId: number) {
+    if (!this.esDemo) return this.accion(() => this.patch(`/cotizaciones/${cotizacionId}/responder?estado=RECHAZADA`));
     this.actualizar(pedidoId, (x) => ({
       ...x,
       cotizaciones: x.cotizaciones.map((y) => (y.id === cotizacionId ? { ...y, estado: 'RECHAZADA' } : y)),
     }), 'El cliente rechazó una cotización');
+    return null;
   }
 
   // RN-12: con 24 horas o más de anticipación se devuelve el anticipo; con menos, se libera al trabajador
-  cancelarPedido(id: number) {
+  async cancelarPedido(id: number) {
+    if (!this.esDemo) return this.accion(() => this.patch(`/solicitudes/${id}/cancelar`));
     const p = this.buscarPedido(id);
     let detalle = 'El cliente canceló la solicitud';
     const c = this.cotizacionAceptada(p);
@@ -311,20 +322,28 @@ export class DatosService {
         : '. Faltaban menos de 24 horas: el anticipo se libera al trabajador (RN-12)';
     }
     this.actualizar(id, (x) => ({ ...x, estado: 'CANCELADO' }), detalle);
+    return null;
   }
 
   // Doble firma: el cliente confirma conformidad y pago del saldo; luego el trabajador confirma que lo recibió
-  confirmarConformidad(pedidoId: number, medio: Pago['medio']) {
+  async confirmarConformidad(pedidoId: number, medio: Pago['medio']) {
     const p = this.buscarPedido(pedidoId);
     const c = this.cotizacionAceptada(p)!;
-    const saldo = this.total(c) - this.anticipo(c);
+    const saldo = this.saldo(c);
+    if (!this.esDemo) {
+      return this.accion(() => this.post('/pagos', { idSolicitud: pedidoId, tipo: 'SALDO_75', medioPago: medio, monto: saldo }));
+    }
     this.actualizar(pedidoId, (x) => ({
       ...x,
       pagos: [...x.pagos, { tipo: 'SALDO_75', medio, monto: saldo, confirmadoCliente: true, confirmadoTrabajador: false }],
     }), `El cliente firmó la conformidad y declaró el pago del saldo de Bs ${saldo} (${medio === 'EFECTIVO' ? 'efectivo' : 'QR'})`);
+    return null;
   }
 
-  calificar(pedidoId: number, puntaje: number, comentario: string) {
+  async calificar(pedidoId: number, puntaje: number, comentario: string) {
+    if (!this.esDemo) {
+      return this.accion(() => this.post('/calificaciones', { idSolicitud: pedidoId, puntaje, ...(comentario && { comentario }) }));
+    }
     const p = this.buscarPedido(pedidoId);
     const fecha = new Date().toISOString().slice(0, 10);
     this.actualizar(pedidoId, (x) => ({ ...x, calificacion: { puntaje, comentario, fecha } }), `El cliente calificó con ${puntaje} estrellas`);
@@ -336,24 +355,47 @@ export class DatosService {
         return { ...t, opiniones, promedio };
       }),
     );
+    return null;
   }
 
   // RN-06: un solo reclamo por servicio
-  reclamar(pedidoId: number, motivo: MotivoReclamo, descripcion: string) {
+  async reclamar(pedidoId: number, motivo: MotivoReclamo, descripcion: string) {
+    if (!this.esDemo) return this.accion(() => this.post('/reclamos', { idSolicitud: pedidoId, motivo, descripcion }));
     this.actualizar(pedidoId, (x) => ({
       ...x,
       reclamo: { pedidoId, motivo, descripcion, fecha: ahora(), estado: 'EN_REVISION' },
     }), 'El cliente registró un reclamo');
+    return null;
   }
 
   // ---------- Trabajador ----------
 
-  enviarCotizacion(pedidoId: number, t: Trabajador, datos: Omit<Cotizacion, 'id' | 'trabajadorId' | 'trabajador' | 'estado'>): string | null {
+  async enviarCotizacion(
+    pedidoId: number,
+    t: Trabajador,
+    datos: Omit<Cotizacion, 'id' | 'trabajadorId' | 'trabajador' | 'estado'>,
+  ): Promise<string | null> {
     if (datos.monto <= 0) return 'Indica el monto del trabajo.';
     if (!datos.fechaInicio) return 'Indica la fecha y hora en que puedes hacer el trabajo.';
     if (datos.duracionHoras <= 0) return 'Indica cuántas horas dura el trabajo.';
     const cruce = this.hayCruce(t.id, datos.fechaInicio, datos.duracionHoras);
     if (cruce) return `Ese horario se cruza con tu trabajo "${cruce.descripcion}". Elige otra hora.`;
+    if (!this.esDemo) {
+      return this.accion(
+        () =>
+          this.post('/cotizaciones', {
+            idSolicitud: pedidoId,
+            requiereVisita: datos.requiereVisita,
+            costoVisita: datos.costoVisita,
+            // En la base se guarda el total (trabajo + visita)
+            montoTotalPropuesto: datos.monto + datos.costoVisita,
+            incluyeMateriales: datos.incluyeMateriales,
+            fechaInicioAgendada: new Date(datos.fechaInicio).toISOString(),
+            duracionEstimadaMinutos: Math.round(datos.duracionHoras * 60),
+          }),
+        false,
+      );
+    }
     const cotizacion: Cotizacion = { ...datos, id: Date.now(), trabajadorId: t.id, trabajador: t.nombre, estado: 'PENDIENTE' };
     const visita = datos.requiereVisita ? ` + visita Bs ${datos.costoVisita}` : '';
     this.actualizar(pedidoId, (x) => ({ ...x, cotizaciones: [...x.cotizaciones, cotizacion] }),
@@ -361,16 +403,24 @@ export class DatosService {
     return null;
   }
 
-  iniciarServicio(pedidoId: number) {
+  async iniciarServicio(pedidoId: number) {
+    if (!this.esDemo) return this.accion(() => this.patch(`/panel/pedidos/${pedidoId}/iniciar`));
     this.actualizar(pedidoId, (x) => ({ ...x, estado: 'EN_PROCESO' }), 'El trabajador inició el servicio');
+    return null;
   }
 
-  marcarTerminado(pedidoId: number) {
+  async marcarTerminado(pedidoId: number) {
+    if (!this.esDemo) return this.accion(() => this.patch(`/panel/pedidos/${pedidoId}/terminar`));
     this.actualizar(pedidoId, (x) => ({ ...x, trabajoTerminado: true }), 'El trabajador marcó el trabajo como terminado');
+    return null;
   }
 
-  confirmarRecepcionPago(pedidoId: number) {
+  async confirmarRecepcionPago(pedidoId: number) {
     const p = this.buscarPedido(pedidoId);
+    if (!this.esDemo) {
+      const saldo = p.pagos.find((pg) => pg.tipo === 'SALDO_75');
+      return this.accion(() => this.patch(`/pagos/${saldo?.id}/confirmar`));
+    }
     this.actualizar(pedidoId, (x) => ({
       ...x,
       estado: 'FINALIZADO',
@@ -379,15 +429,21 @@ export class DatosService {
     this.trabajadores.update((lista) =>
       lista.map((t) => (t.id === p.trabajadorId ? { ...t, trabajosRealizados: t.trabajosRealizados + 1 } : t)),
     );
+    return null;
   }
 
   // ---------- Administrador ----------
 
-  aprobarTrabajador(id: number) {
+  async aprobarTrabajador(id: number) {
+    this.motivosRechazo.delete(id);
+    if (!this.esDemo) return this.accion(() => this.patch(`/trabajadores/${id}/verificar`, { aprobar: true }));
     this.trabajadores.update((lista) => lista.map((t) => (t.id === id ? { ...t, estado: 'ACTIVO', motivoRechazo: undefined } : t)));
+    return null;
   }
 
+  // Solo en la demo: en la versión conectada el backend ya creó al trabajador en revisión
   agregarTrabajadorEnRevision(d: { nombre: string; correo: string; ci: string; especialidades: string[]; zonas: string[] }) {
+    if (!this.esDemo) return;
     const nuevo: Trabajador = {
       ...d, id: Date.now(), correo: d.correo.toLowerCase(), experiencia: 'Recién registrado.', estado: 'REVISION',
       documentos: ['CI.pdf', 'Antecedentes.pdf'], promedio: 0, trabajosRealizados: 0, opiniones: [],
@@ -395,31 +451,47 @@ export class DatosService {
     this.trabajadores.update((lista) => [...lista, nuevo]);
   }
 
-  rechazarTrabajador(id: number, motivo: string) {
+  async rechazarTrabajador(id: number, motivo: string) {
+    if (!this.esDemo) {
+      // El backend deja la cuenta "en revisión" (observada) hasta que corrija sus documentos
+      this.motivosRechazo.set(id, motivo);
+      return this.accion(() => this.patch(`/trabajadores/${id}/verificar`, { aprobar: false, motivo }));
+    }
     this.trabajadores.update((lista) =>
       lista.map((t) => (t.id === id ? { ...t, estado: 'SUSPENDIDO', motivoRechazo: motivo } : t)),
     );
+    return null;
   }
 
-  agregarCatalogo(tipo: 'categoria' | 'zona', nombre: string): string | null {
+  async agregarCatalogo(tipo: 'categoria' | 'zona', nombre: string): Promise<string | null> {
     const lista = tipo === 'categoria' ? this.listaCategorias : this.listaZonas;
     nombre = nombre.trim();
     if (!nombre) return 'Escribe un nombre.';
     if (lista().some((x) => x.nombre.toLowerCase() === nombre.toLowerCase())) return 'Ya existe con ese nombre.';
+    if (!this.esDemo) return this.accion(() => this.post(tipo === 'categoria' ? '/categorias' : '/zonas', { nombre }), false);
     lista.update((l) => [...l, { nombre, activa: true }]);
     return null;
   }
 
-  alternarCatalogo(tipo: 'categoria' | 'zona', nombre: string) {
+  async alternarCatalogo(tipo: 'categoria' | 'zona', nombre: string) {
     const lista = tipo === 'categoria' ? this.listaCategorias : this.listaZonas;
+    if (!this.esDemo) {
+      const item = lista().find((x) => x.nombre === nombre)!;
+      const ruta = tipo === 'categoria' ? 'categorias' : 'zonas';
+      return this.accion(() => this.patch(`/${ruta}/${item.id}/${item.activa ? 'desactivar' : 'activar'}`));
+    }
     lista.update((l) => l.map((x) => (x.nombre === nombre ? { ...x, activa: !x.activa } : x)));
+    return null;
   }
 
-  pedidosConReclamo = computed(() => this.pedidos().filter((p) => p.reclamo));
-
   // Si el reclamo procede, el trabajador queda suspendido (bloqueado si fue robo)
-  resolverReclamo(pedidoId: number, procede: boolean, resolucion: string) {
+  async resolverReclamo(pedidoId: number, procede: boolean, resolucion: string) {
     const p = this.buscarPedido(pedidoId);
+    if (!this.esDemo) {
+      return this.accion(() =>
+        this.patch(`/reclamos/${p.reclamo!.id}/resolver`, { resolucion: procede ? 'PROCEDENTE' : 'IMPROCEDENTE' }),
+      );
+    }
     this.actualizar(pedidoId, (x) => ({
       ...x,
       reclamo: { ...x.reclamo!, estado: procede ? 'PROCEDENTE' : 'IMPROCEDENTE', resolucion },
@@ -428,9 +500,10 @@ export class DatosService {
       const estado = p.reclamo?.motivo === 'ROBO' ? 'BLOQUEADO_PERMANENTE' : 'SUSPENDIDO';
       this.trabajadores.update((lista) => lista.map((t) => (t.id === p.trabajadorId ? { ...t, estado } : t)));
     }
+    return null;
   }
 
-  // ---------- Ayudantes ----------
+  // ---------- Ayudantes (versión demo) ----------
 
   private buscarPedido(id: number): Pedido {
     return this.pedidos().find((p) => p.id === id)!;
@@ -442,4 +515,146 @@ export class DatosService {
       lista.map((p) => (p.id === id ? { ...cambio(p), historial: [...p.historial, { fecha: ahora(), descripcion: evento }] } : p)),
     );
   }
+}
+
+// ---------- Formato de las respuestas del backend y su conversión ----------
+
+interface CatalogoApi {
+  idCategoria?: number;
+  idZona?: number;
+  nombre: string;
+  activa: boolean;
+}
+
+interface TrabajadorApi {
+  idPerfil: number;
+  idUsuario: number;
+  nombreCompleto: string;
+  estadoCuenta: Trabajador['estado'];
+  categorias: string[];
+  zonas: string[];
+  promedio: number;
+  trabajosRealizados: number;
+  opiniones: { cliente: string; puntaje: number; comentario: string; fecha: string }[];
+  correo?: string;
+  ciNumero?: string;
+  documentos?: string[];
+}
+
+interface PedidoApi {
+  idSolicitud: number;
+  descripcion: string;
+  direccionExacta: string;
+  montoOfrecido: number | null;
+  estado: string;
+  fechaCreacion: string;
+  fechaInicioAgendada: string | null;
+  categoria: { nombre: string } | null;
+  zona: { nombre: string } | null;
+  fotos: { urlFoto: string }[];
+  cliente: { nombreCompleto: string } | null;
+  trabajador: { idPerfil: number; nombreCompleto: string } | null;
+  cotizaciones: {
+    idCotizacion: number;
+    requiereVisita: boolean;
+    costoVisita: number;
+    montoTotalPropuesto: number;
+    incluyeMateriales: boolean;
+    estadoAprobacion: Cotizacion['estado'];
+    fechaInicioPropuesta: string | null;
+    duracionMin: number | null;
+    trabajador: { idPerfil: number; nombreCompleto: string } | null;
+  }[];
+  pagos: {
+    idPago: number;
+    tipo: Pago['tipo'];
+    medioPago: Pago['medio'];
+    monto: number;
+    conformidadCliente: boolean;
+    confirmadoPorTrabajador: boolean;
+  }[];
+  historial: { descripcion: string; fechaHora: string }[];
+  trabajoTerminado: boolean;
+  reclamo: { idReclamo: number; motivo: MotivoReclamo; descripcion: string | null; estadoResolucion: 'EN_REVISION' | 'PROCEDENTE' | 'IMPROCEDENTE' } | null;
+  calificacion: { puntaje: number; comentario: string; fecha: string } | null;
+}
+
+// ISO del backend → "AAAA-MM-DDTHH:mm" en hora local (formato de <input type="datetime-local">)
+function aLocal(iso: string | null | undefined): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+}
+
+function aTrabajador(t: TrabajadorApi, motivoRechazo?: string): Trabajador {
+  return {
+    id: t.idPerfil,
+    idUsuario: t.idUsuario,
+    nombre: t.nombreCompleto,
+    correo: t.correo ?? '',
+    ci: t.ciNumero ?? '',
+    especialidades: t.categorias,
+    zonas: t.zonas,
+    experiencia: '',
+    estado: t.estadoCuenta,
+    documentos: t.documentos ?? [],
+    motivoRechazo,
+    promedio: t.promedio,
+    trabajosRealizados: t.trabajosRealizados,
+    opiniones: t.opiniones.map((o) => ({ ...o, fecha: String(o.fecha).slice(0, 10) })),
+  };
+}
+
+function aPedido(s: PedidoApi): Pedido {
+  // BAJO_REVISION (ya recibió cotizaciones) se muestra igual que PENDIENTE
+  const estado = (s.estado === 'BAJO_REVISION' ? 'PENDIENTE' : s.estado) as EstadoPedido;
+  return {
+    id: s.idSolicitud,
+    cliente: s.cliente?.nombreCompleto ?? '',
+    categoria: s.categoria?.nombre ?? '',
+    descripcion: s.descripcion,
+    zona: s.zona?.nombre ?? '',
+    direccion: s.direccionExacta,
+    fecha: aLocal(s.fechaInicioAgendada ?? s.fechaCreacion).slice(0, 10),
+    montoOfrecido: s.montoOfrecido ?? 0,
+    fotos: s.fotos.map((f) => f.urlFoto),
+    estado,
+    trabajadorId: s.trabajador?.idPerfil,
+    trabajador: s.trabajador?.nombreCompleto,
+    cotizaciones: s.cotizaciones.map((c) => ({
+      id: c.idCotizacion,
+      trabajadorId: c.trabajador?.idPerfil ?? 0,
+      trabajador: c.trabajador?.nombreCompleto ?? '',
+      requiereVisita: c.requiereVisita,
+      costoVisita: c.costoVisita,
+      monto: c.montoTotalPropuesto - c.costoVisita,
+      incluyeMateriales: c.incluyeMateriales,
+      fechaInicio: aLocal(c.fechaInicioPropuesta ?? s.fechaInicioAgendada),
+      duracionHoras: (c.duracionMin ?? 120) / 60,
+      estado: c.estadoAprobacion,
+    })),
+    pagos: s.pagos.map((p) => ({
+      id: p.idPago,
+      tipo: p.tipo,
+      medio: p.medioPago,
+      monto: p.monto,
+      confirmadoCliente: p.conformidadCliente,
+      confirmadoTrabajador: p.confirmadoPorTrabajador,
+    })),
+    trabajoTerminado: s.trabajoTerminado,
+    calificacion: s.calificacion
+      ? { puntaje: s.calificacion.puntaje, comentario: s.calificacion.comentario, fecha: String(s.calificacion.fecha).slice(0, 10) }
+      : undefined,
+    reclamo: s.reclamo
+      ? {
+          id: s.reclamo.idReclamo,
+          pedidoId: s.idSolicitud,
+          motivo: s.reclamo.motivo,
+          descripcion: s.reclamo.descripcion ?? '',
+          fecha: '',
+          estado: s.reclamo.estadoResolucion,
+        }
+      : undefined,
+    historial: s.historial.map((h) => ({ fecha: new Date(h.fechaHora).toLocaleString('es-BO'), descripcion: h.descripcion })),
+  };
 }

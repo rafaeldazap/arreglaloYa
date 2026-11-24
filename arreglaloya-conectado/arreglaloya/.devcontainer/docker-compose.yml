@@ -1,0 +1,33 @@
+services:
+  app:
+    image: mcr.microsoft.com/devcontainers/javascript-node:24
+    volumes:
+      - ../..:/workspaces:cached
+    command: sleep infinity
+    # Variables que lee el backend (en Codespaces no hace falta crear backend/.env)
+    environment:
+      NODE_ENV: development
+      PORT: 8080
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+      DB_DATABASE: arreglaloya
+      DB_SYNC: "true"
+      JWT_SECRET: arreglalo-ya-secreto-de-desarrollo-cambiar-en-produccion
+      JWT_EXPIRATION: 86400s
+    depends_on:
+      - db
+
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: arreglaloya
+    volumes:
+      - datos-postgres:/var/lib/postgresql/data
+
+volumes:
+  datos-postgres:

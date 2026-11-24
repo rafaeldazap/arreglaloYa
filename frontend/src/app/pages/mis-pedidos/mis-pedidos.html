@@ -42,7 +42,7 @@
             </div>
             @if (panel()?.tipo === 'pagar' && panel()?.cotizacion === c.id) {
               <div class="pago">
-                <p><b>Pago del anticipo (simulado)</b><br />Se cobrarán <b>Bs {{ datos.anticipo(c) }}</b> por la pasarela de la plataforma. El saldo de Bs {{ datos.total(c) - datos.anticipo(c) }} se paga al trabajador al terminar.</p>
+                <p><b>Pago del anticipo (simulado)</b><br />Se cobrarán <b>Bs {{ datos.anticipo(c) }}</b> por la pasarela de la plataforma. El saldo de Bs {{ datos.saldo(c) }} se paga al trabajador al terminar.</p>
                 @if (error()) { <p class="error">{{ error() }}</p> }
                 <div class="acciones">
                   <button class="btn" (click)="pagarYAceptar(p, c.id)">Pagar Bs {{ datos.anticipo(c) }}</button>
@@ -64,7 +64,7 @@
       <!-- APROBADO -->
       @if (p.estado === 'APROBADO') {
         @if (datos.cotizacionAceptada(p); as c) {
-          <p class="aviso">{{ p.trabajador }} vendrá el <b>{{ fechaHora(c.fechaInicio) }}</b>. Anticipo pagado: Bs {{ datos.anticipo(c) }}. Saldo al terminar: Bs {{ datos.total(c) - datos.anticipo(c) }}.</p>
+          <p class="aviso">{{ p.trabajador }} vendrá el <b>{{ fechaHora(c.fechaInicio) }}</b>. Anticipo pagado: Bs {{ datos.anticipo(c) }}. Saldo al terminar: Bs {{ datos.saldo(c) }}.</p>
         }
       }
 
@@ -75,7 +75,7 @@
         } @else if (!saldoDeclarado(p)) {
           @if (datos.cotizacionAceptada(p); as c) {
             <div class="pago">
-              <p><b>El trabajador terminó.</b> Revisa el trabajo y, si estás conforme, paga el saldo de <b>Bs {{ datos.total(c) - datos.anticipo(c) }}</b> directo al trabajador.</p>
+              <p><b>El trabajador terminó.</b> Revisa el trabajo y, si estás conforme, paga el saldo de <b>Bs {{ datos.saldo(c) }}</b> directo al trabajador.</p>
               <label for="medio-{{ p.id }}">¿Cómo pagaste?</label>
               <select id="medio-{{ p.id }}" [(ngModel)]="medioPago">
                 <option value="EFECTIVO">Efectivo</option>

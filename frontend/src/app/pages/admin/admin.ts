@@ -32,16 +32,16 @@ export class Admin {
   // Reclamos
   resolucion: Record<number, string> = {};
 
-  rechazar(id: number) {
+  async rechazar(id: number) {
     if (!this.motivoRechazo.trim()) return;
-    this.datos.rechazarTrabajador(id, this.motivoRechazo.trim());
+    await this.datos.rechazarTrabajador(id, this.motivoRechazo.trim());
     this.rechazando.set(null);
     this.motivoRechazo = '';
   }
 
-  agregar(tipo: 'categoria' | 'zona') {
+  async agregar(tipo: 'categoria' | 'zona') {
     const nombre = tipo === 'categoria' ? this.nuevaCategoria : this.nuevaZona;
-    const error = this.datos.agregarCatalogo(tipo, nombre);
+    const error = await this.datos.agregarCatalogo(tipo, nombre);
     this.errorCatalogo.set(error ?? '');
     if (!error) {
       if (tipo === 'categoria') this.nuevaCategoria = '';

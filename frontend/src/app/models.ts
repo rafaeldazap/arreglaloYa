@@ -19,6 +19,7 @@ export interface Usuario {
 }
 
 export interface Catalogo {
+  id?: number; // id en la base de datos (versión con backend)
   nombre: string;
   activa: boolean;
 }
@@ -31,7 +32,8 @@ export interface Opinion {
 }
 
 export interface Trabajador {
-  id: number;
+  id: number; // id del perfil de trabajador
+  idUsuario?: number;
   nombre: string;
   correo: string;
   ci: string;
@@ -60,6 +62,7 @@ export interface Cotizacion {
 }
 
 export interface Pago {
+  id?: number;
   tipo: 'ANTICIPO_25' | 'SALDO_75';
   medio: 'PASARELA_APP' | 'EFECTIVO' | 'QR_TRABAJADOR';
   monto: number;
@@ -76,6 +79,7 @@ export interface Calificacion {
 export type MotivoReclamo = 'INASISTENCIA' | 'MAL_ARREGLO' | 'INCUMPLIMIENTO_PAGO' | 'ROBO';
 
 export interface Reclamo {
+  id?: number;
   pedidoId: number;
   motivo: MotivoReclamo;
   descripcion: string;

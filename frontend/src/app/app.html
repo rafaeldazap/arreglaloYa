@@ -29,6 +29,12 @@
 </header>
 
 <main>
+  @if (datos.errorApi()) {
+    <div class="aviso-error" role="alert">
+      <span>{{ datos.errorApi() }}</span>
+      <button (click)="datos.errorApi.set('')" aria-label="Cerrar aviso">✕</button>
+    </div>
+  }
   <router-outlet />
 </main>
 
