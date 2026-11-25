@@ -72,6 +72,7 @@ export class DatosService {
       this.trabajadores.set(trabajadores.map((t) => aTrabajador(t, this.motivosRechazo.get(t.idPerfil))));
       const pedidos = usuario ? await this.get<PedidoApi[]>('/panel/pedidos') : [];
       this.pedidos.set(pedidos.map(aPedido));
+      this.errorApi.set('');
     } catch (e) {
       const err = e as HttpErrorResponse;
       // Token vencido o inválido: se cierra la sesión
