@@ -7,7 +7,6 @@ services:
     # Variables que lee el backend (en Codespaces no hace falta crear backend/.env)
     environment:
       NODE_ENV: development
-      PORT: 8080
       DB_HOST: db
       DB_PORT: 5432
       DB_USERNAME: postgres
