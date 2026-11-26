@@ -21,7 +21,7 @@
     </div>
   </div>
 
-  <p class="cantidad">{{ resultados.length }} trabajador(es) encontrado(s)</p>
+  <p class="cantidad">{{ resultados.length }} {{ resultados.length === 1 ? 'trabajador encontrado' : 'trabajadores encontrados' }}</p>
 
   <div class="grid">
     @for (t of resultados; track t.id) {
