@@ -102,6 +102,7 @@ En el Codespace: `psql -h db -U postgres arreglaloya` (contraseña `postgres`), 
 | Calificar | POST /api/v1/calificaciones |
 | Reclamar / resolver | POST /api/v1/reclamos, PATCH /api/v1/reclamos/:id/resolver |
 | Aprobar o rechazar trabajador | PATCH /api/v1/trabajadores/:id/verificar |
+| Panel de estadísticas (admin) | GET /api/v1/estadisticas/admin?desde=&hasta=&idCategoria=&idZona=&agrupacion= |
 
 ## Equipo
 

@@ -6,6 +6,7 @@ import {
   OneToMany,
   JoinColumn,
   CreateDateColumn,
+  Index,
 } from 'typeorm';
 import { Usuario } from './Usuario';
 import { PerfilTrabajador } from './PerfilTrabajador';
@@ -15,6 +16,9 @@ import { EstadoSolicitud } from '../common/enums';
 import { FotoSolicitud } from './FotoSolicitud';
 
 @Entity('solicitud_servicio')
+// Índices para que el panel de estadísticas filtre rápido por fecha y por estado
+@Index('idx_solicitud_fecha_creacion', ['fechaCreacion'])
+@Index('idx_solicitud_estado', ['estado'])
 export class SolicitudServicio {
   @PrimaryGeneratedColumn({ name: 'id_solicitud' })
   idSolicitud: number;

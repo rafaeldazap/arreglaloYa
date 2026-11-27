@@ -2,12 +2,13 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { DatosService } from '../../services/datos.service';
 import { estrellas, nombresEstado, nombresMotivo } from '../../formato';
+import { EstadisticasAdmin } from './estadisticas/estadisticas';
 
-type Pestana = 'trabajadores' | 'catalogos' | 'reclamos' | 'reportes';
+type Pestana = 'trabajadores' | 'catalogos' | 'reclamos' | 'estadisticas';
 
 @Component({
   selector: 'app-admin',
-  imports: [FormsModule],
+  imports: [FormsModule, EstadisticasAdmin],
   templateUrl: './admin.html',
   styleUrl: './admin.css',
 })
@@ -18,7 +19,9 @@ export class Admin {
   motivos = nombresMotivo;
 
   pestana = signal<Pestana>('trabajadores');
-  reclamosAbiertos = computed(() => this.datos.pedidosConReclamo().filter((p) => p.reclamo!.estado === 'EN_REVISION'));
+  reclamosAbiertos = computed(() =>
+    this.datos.pedidosConReclamo().filter((p) => p.reclamo!.estado === 'EN_REVISION'),
+  );
 
   // Rechazo de trabajador
   rechazando = signal<number | null>(null);
@@ -50,7 +53,9 @@ export class Admin {
   }
 
   resolver(pedidoId: number, procede: boolean) {
-    const texto = this.resolucion[pedidoId]?.trim() || (procede ? 'Se sancionó al trabajador.' : 'No se encontraron pruebas suficientes.');
+    const texto =
+      this.resolucion[pedidoId]?.trim() ||
+      (procede ? 'Se sancionó al trabajador.' : 'No se encontraron pruebas suficientes.');
     this.datos.resolverReclamo(pedidoId, procede, texto);
   }
 

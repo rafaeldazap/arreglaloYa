@@ -1,0 +1,164 @@
+<!-- Filtros -->
+<div class="tarjeta filtros">
+  <div class="campos">
+    <label>
+      Desde
+      <input type="date" [ngModel]="desde()" (ngModelChange)="cambiarFecha('desde', $event)" [max]="hasta() || null" />
+    </label>
+    <label>
+      Hasta
+      <input type="date" [ngModel]="hasta()" (ngModelChange)="cambiarFecha('hasta', $event)" [min]="desde() || null" />
+    </label>
+    <label>
+      Categoría
+      <select [ngModel]="idCategoria()" (ngModelChange)="idCategoria.set($event)">
+        <option [ngValue]="null">Todas</option>
+        @for (c of datos.todasCategorias(); track c.nombre) {
+          <option [ngValue]="c.id">{{ c.nombre }}</option>
+        }
+      </select>
+    </label>
+    <label>
+      Zona
+      <select [ngModel]="idZona()" (ngModelChange)="idZona.set($event)">
+        <option [ngValue]="null">Todas</option>
+        @for (z of datos.todasZonas(); track z.nombre) {
+          <option [ngValue]="z.id">{{ z.nombre }}</option>
+        }
+      </select>
+    </label>
+    <label>
+      Agrupar por
+      <select [ngModel]="agrupacion()" (ngModelChange)="agrupacion.set($event)">
+        <option value="dia">Día</option>
+        <option value="semana">Semana</option>
+        <option value="mes">Mes</option>
+      </select>
+    </label>
+  </div>
+  <div class="atajos">
+    <span>Rápido:</span>
+    @for (d of [7, 30, 90]; track d) {
+      <button class="chip" [class.activo]="rapido() === d" (click)="ultimosDias(d)">Últimos {{ d }} días</button>
+    }
+    @if (hayFiltros()) {
+      <button class="chip limpiar" (click)="limpiar()">Quitar filtros ✕</button>
+    }
+  </div>
+  @if (nombreCategoria() || nombreZona()) {
+    <div class="activos">
+      Filtrando:
+      @if (nombreCategoria()) {
+        <span class="etiqueta">{{ nombreCategoria() }} <button (click)="idCategoria.set(null)" aria-label="Quitar categoría">✕</button></span>
+      }
+      @if (nombreZona()) {
+        <span class="etiqueta">{{ nombreZona() }} <button (click)="idZona.set(null)" aria-label="Quitar zona">✕</button></span>
+      }
+    </div>
+  }
+</div>
+
+@if (error()) {
+  <div class="aviso-error" role="alert">{{ error() }}</div>
+}
+
+@if (resultado(); as r) {
+  <div class="contenido" [class.cargando]="cargando()">
+    <!-- Indicadores principales -->
+    <div class="indicadores">
+      <div class="tarjeta dato">
+        <span>Solicitudes</span>
+        <b>{{ r.resumen.total }}</b>
+        <small>en el periodo</small>
+      </div>
+      <div class="tarjeta dato verde">
+        <span>Atendidas</span>
+        <b>{{ r.resumen.porcentajeAtendidas }}%</b>
+        <small>{{ r.resumen.atendidas }} finalizadas</small>
+      </div>
+      <div class="tarjeta dato rojo">
+        <span>Canceladas</span>
+        <b>{{ r.resumen.porcentajeCanceladas }}%</b>
+        <small>{{ r.resumen.canceladas }} canceladas</small>
+      </div>
+      <div class="tarjeta dato">
+        <span>Categoría más demandada</span>
+        <b class="texto">{{ r.resumen.categoriaMasDemandada?.nombre ?? '—' }}</b>
+        <small>{{ r.resumen.categoriaMasDemandada?.total ?? 0 }} solicitudes</small>
+      </div>
+      <div class="tarjeta dato naranja">
+        <span>Zona con mayor actividad</span>
+        <b class="texto">{{ r.resumen.zonaMayorActividad?.nombre ?? '—' }}</b>
+        <small>{{ r.resumen.zonaMayorActividad?.total ?? 0 }} solicitudes</small>
+      </div>
+    </div>
+
+    @if (r.resumen.total === 0) {
+      <div class="tarjeta vacio">No hay solicitudes con estos filtros. Prueba con otro rango de fechas o quita los filtros.</div>
+    }
+
+    <!-- Gráficos -->
+    <div class="graficos" [class.oculto]="r.resumen.total === 0">
+      <div class="tarjeta">
+        <h3>Solicitudes por estado</h3>
+        <div class="lienzo"><canvas #graficoEstados></canvas></div>
+      </div>
+      <div class="tarjeta">
+        <h3>Demanda por categoría</h3>
+        <p class="ayuda">Haz clic en una barra para filtrar por esa categoría.</p>
+        <div class="lienzo"><canvas #graficoCategorias></canvas></div>
+      </div>
+      <div class="tarjeta">
+        <h3>Zonas con mayor actividad</h3>
+        <p class="ayuda">Haz clic en una barra para filtrar por esa zona.</p>
+        <div class="lienzo"><canvas #graficoZonas></canvas></div>
+      </div>
+      <div class="tarjeta">
+        <h3>Evolución en el tiempo</h3>
+        <div class="lienzo"><canvas #graficoTendencia></canvas></div>
+      </div>
+    </div>
+
+    <!-- Tablas con el detalle -->
+    <div class="tablas" [class.oculto]="r.resumen.total === 0">
+      <div>
+        <h3>Detalle por categoría</h3>
+        <div class="tabla-scroll">
+          <table>
+            <thead>
+              <tr><th>Categoría</th><th>Total</th><th>% del total</th><th>% atendidas</th><th>% canceladas</th></tr>
+            </thead>
+            <tbody>
+              @for (c of r.porCategoria; track c.id) {
+                <tr (click)="idCategoria.set(c.id)" class="clic">
+                  <td>{{ c.nombre }}</td><td>{{ c.total }}</td><td>{{ c.porcentajeDelTotal }}%</td>
+                  <td>{{ c.porcentajeAtendidas }}%</td><td>{{ c.porcentajeCanceladas }}%</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div>
+        <h3>Detalle por zona</h3>
+        <div class="tabla-scroll">
+          <table>
+            <thead>
+              <tr><th>Zona</th><th>Total</th><th>% del total</th><th>% atendidas</th><th>% canceladas</th></tr>
+            </thead>
+            <tbody>
+              @for (z of r.porZona; track z.id) {
+                <tr (click)="idZona.set(z.id)" class="clic">
+                  <td>{{ z.nombre }}</td><td>{{ z.total }}</td><td>{{ z.porcentajeDelTotal }}%</td>
+                  <td>{{ z.porcentajeAtendidas }}%</td><td>{{ z.porcentajeCanceladas }}%</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+} @else if (cargando()) {
+  <div class="tarjeta vacio">Calculando estadísticas…</div>
+}
