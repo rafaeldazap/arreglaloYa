@@ -17,6 +17,7 @@ import { PagosModule } from './modules/pagos/pagos.module';
 import { CalificacionesModule } from './modules/calificaciones/calificaciones.module';
 import { ReclamosModule } from './modules/reclamos/reclamos.module';
 import { PanelModule } from './modules/panel/panel.module';
+import { EstadisticasModule } from './modules/estadisticas/estadisticas.module';
 
 @Module({
   imports: [
@@ -44,6 +45,7 @@ import { PanelModule } from './modules/panel/panel.module';
     CalificacionesModule,
     ReclamosModule,
     PanelModule,
+    EstadisticasModule,
   ],
   providers: [
     {

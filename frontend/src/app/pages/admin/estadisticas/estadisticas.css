@@ -1,0 +1,205 @@
+.filtros {
+  margin-bottom: 16px;
+  padding: 16px 20px;
+}
+.campos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+}
+.campos label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.85rem;
+  color: var(--gris);
+}
+.campos input,
+.campos select {
+  padding: 8px 10px;
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  font: inherit;
+  color: var(--texto);
+  background: #fff;
+}
+.atajos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-top: 12px;
+  font-size: 0.85rem;
+  color: var(--gris);
+}
+.chip {
+  border: 1px solid var(--borde);
+  background: #fff;
+  border-radius: 999px;
+  padding: 5px 12px;
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+  color: var(--texto);
+}
+.chip.activo {
+  background: var(--azul);
+  color: #fff;
+  border-color: var(--azul);
+}
+.chip.limpiar {
+  color: var(--rojo);
+  border-color: #f5c2bd;
+}
+.activos {
+  margin-top: 10px;
+  font-size: 0.85rem;
+  color: var(--gris);
+}
+.activos .etiqueta button {
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: inherit;
+  padding: 0 0 0 4px;
+}
+
+.aviso-error {
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: #fdecea;
+  color: #8a1c13;
+  border: 1px solid #f5c2bd;
+  margin-bottom: 16px;
+}
+
+.contenido {
+  transition: opacity 0.2s;
+}
+.contenido.cargando {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.indicadores {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.dato {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 14px 16px;
+  border-top: 4px solid var(--azul);
+}
+.dato span {
+  color: var(--gris);
+  font-size: 0.85rem;
+}
+.dato b {
+  font-size: 1.7rem;
+  color: var(--azul);
+  font-variant-numeric: tabular-nums;
+}
+.dato b.texto {
+  font-size: 1.25rem;
+  padding: 4px 0;
+}
+.dato small {
+  color: var(--gris);
+  font-size: 0.8rem;
+}
+.dato.verde {
+  border-top-color: #2a9d8f;
+}
+.dato.verde b {
+  color: #2a9d8f;
+}
+.dato.rojo {
+  border-top-color: #d64545;
+}
+.dato.rojo b {
+  color: #d64545;
+}
+.dato.naranja {
+  border-top-color: #e76f51;
+}
+
+.graficos {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.graficos h3,
+.tablas h3 {
+  margin: 0 0 4px;
+  font-size: 1.05rem;
+}
+.ayuda {
+  margin: 0 0 8px;
+  color: var(--gris);
+  font-size: 0.8rem;
+}
+.lienzo {
+  position: relative;
+  height: 280px;
+}
+.oculto {
+  display: none;
+}
+.vacio {
+  color: var(--gris);
+  margin-bottom: 16px;
+}
+
+.tablas {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.tabla-scroll {
+  overflow-x: auto;
+  background: #fff;
+  border: 1px solid var(--borde);
+  border-radius: 12px;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+th,
+td {
+  text-align: left;
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--borde);
+}
+td:not(:first-child),
+th:not(:first-child) {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+th {
+  background: #f6f8fb;
+  color: var(--gris);
+  font-weight: 600;
+}
+tr:last-child td {
+  border-bottom: none;
+}
+tr.clic {
+  cursor: pointer;
+}
+tr.clic:hover td {
+  background: #f3f6fa;
+}
+
+@media (max-width: 860px) {
+  .graficos,
+  .tablas {
+    grid-template-columns: 1fr;
+  }
+}

@@ -9,7 +9,7 @@
     <button [class.activa]="pestana() === 'reclamos'" (click)="pestana.set('reclamos')">Reclamos
       @if (reclamosAbiertos().length) { <span class="contador">{{ reclamosAbiertos().length }}</span> }
     </button>
-    <button [class.activa]="pestana() === 'reportes'" (click)="pestana.set('reportes')">Reportes</button>
+    <button [class.activa]="pestana() === 'estadisticas'" (click)="pestana.set('estadisticas')">Estadísticas</button>
   </div>
 
   @switch (pestana()) {
@@ -126,8 +126,11 @@
       }
     }
 
-    @case ('reportes') {
-      @if (datos.reportes(); as r) {
+    @case ('estadisticas') {
+      @if (!datos.esDemo) {
+        <!-- Panel de estadísticas calculado en el backend (GET /api/v1/estadisticas/admin) -->
+        <app-estadisticas-admin />
+      } @else if (datos.reportes(); as r) {
         <div class="resumen">
           <div class="tarjeta dato"><span>Pedidos totales</span><b>{{ r.totalPedidos }}</b></div>
           <div class="tarjeta dato"><span>Finalizados</span><b>{{ r.finalizados }}</b></div>

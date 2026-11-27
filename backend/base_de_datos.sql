@@ -78,6 +78,10 @@ CREATE TABLE solicitud_servicio (
     fecha_fin_estimada TIMESTAMPTZ
 );
 
+-- Índices para el panel de estadísticas (filtros por fecha y estado)
+CREATE INDEX idx_solicitud_fecha_creacion ON solicitud_servicio (fecha_creacion);
+CREATE INDEX idx_solicitud_estado ON solicitud_servicio (estado);
+
 CREATE TABLE foto_solicitud (
     id_foto SERIAL PRIMARY KEY,
     id_solicitud INTEGER NOT NULL REFERENCES solicitud_servicio(id_solicitud),
