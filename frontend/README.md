@@ -2,6 +2,24 @@
 
 This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 22.2.6.
 
+## Estructura del frontend
+
+Las páginas están en `src/app/pages/` y sus rutas se definen en `src/app/app.routes.ts`.
+
+| Ruta | Página (carpeta) | Quién puede entrar |
+| --- | --- | --- |
+| `/` | Inicio (`inicio/`) | Todos |
+| `/login` | Iniciar sesión (`login/`) | Todos |
+| `/registro` | Crear cuenta (`registro/`) | Todos |
+| `/buscar` | Buscar trabajadores (`buscar/`) | Todos |
+| `/trabajador/:id` | Perfil del trabajador (`perfil-trabajador/`) | Todos |
+| `/nueva-solicitud` | Nueva solicitud (`nueva-solicitud/`) | Solo CLIENTE |
+| `/mis-pedidos` | Mis pedidos (`mis-pedidos/`) | Solo CLIENTE |
+| `/panel-trabajador` | Panel del trabajador (`panel-trabajador/`) | Solo TRABAJADOR |
+| `/admin` | Administración (`admin/`) | Solo ADMIN |
+
+Cualquier otra ruta redirige a `/` (Inicio). Las rutas restringidas usan `rolGuard` (`src/app/services/rol.guard.ts`).
+
 ## Development server
 
 To start a local development server, run:
