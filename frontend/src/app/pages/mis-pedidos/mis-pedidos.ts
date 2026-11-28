@@ -68,7 +68,7 @@ export class MisPedidos {
 
   async cancelar(p: Pedido) {
     this.panel.set(null);
-    await this.datos.cancelarPedido(p.id);
+    await this.datos.cancelarPedido(p.id, 'CAMBIO_DE_PLANES', '');
   }
 
   firmarConformidad(p: Pedido) {

@@ -2,7 +2,18 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { computed, effect, inject, Injectable, signal, untracked } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
-import { Catalogo, Cotizacion, EstadoPedido, MotivoReclamo, Pago, Pedido, Trabajador, Usuario } from '../models';
+import {
+  Catalogo,
+  Cotizacion,
+  EstadoPedido,
+  MotivoCancelacion,
+  MotivoReclamo,
+  Pago,
+  Pedido,
+  PrevisualizacionCancelacion,
+  Trabajador,
+  Usuario,
+} from '../models';
 import { AuthService } from './auth.service';
 import { categoriasDemo, pedidosDemo, trabajadoresDemo, zonasDemo } from './datos-demo';
 
@@ -310,19 +321,27 @@ export class DatosService {
     return null;
   }
 
-  // RN-12: con 24 horas o más de anticipación se devuelve el anticipo; con menos, se libera al trabajador
-  async cancelarPedido(id: number) {
-    if (!this.esDemo) return this.accion(() => this.patch(`/solicitudes/${id}/cancelar`));
-    const p = this.buscarPedido(id);
-    let detalle = 'El cliente canceló la solicitud';
-    const c = this.cotizacionAceptada(p);
-    if (p.estado === 'APROBADO' && c) {
-      const horas = (new Date(c.fechaInicio).getTime() - Date.now()) / 3600000;
-      detalle += horas >= 24
-        ? '. Se devuelve el anticipo al cliente (RN-12)'
-        : '. Faltaban menos de 24 horas: el anticipo se libera al trabajador (RN-12)';
+  // Muestra qué pasaría al cancelar (estado, anticipo, penalización y reembolso) sin cambiar nada
+  async previsualizarCancelacion(id: number): Promise<{ datos: PrevisualizacionCancelacion | null; error: string | null }> {
+    if (this.esDemo) return { datos: this.previsualizarDemo(this.buscarPedido(id)), error: null };
+    try {
+      const datos = await this.get<PrevisualizacionCancelacion>(`/solicitudes/${id}/cancelacion/previsualizar`);
+      return { datos, error: null };
+    } catch (e) {
+      return { datos: null, error: this.auth.mensajeError(e as HttpErrorResponse) };
     }
-    this.actualizar(id, (x) => ({ ...x, estado: 'CANCELADO' }), detalle);
+  }
+
+  // RN-12: con 24 horas o más de anticipación se devuelve el anticipo; con menos, se libera al trabajador
+  async cancelarPedido(id: number, motivo: MotivoCancelacion, detalle: string): Promise<string | null> {
+    const cuerpo = { motivo, ...(detalle.trim() && { detalle: detalle.trim() }) };
+    if (!this.esDemo) return this.accion(() => this.patch(`/solicitudes/${id}/cancelar`, cuerpo), false);
+    const previa = this.previsualizarDemo(this.buscarPedido(id));
+    if (!previa.puedeCancelar) return previa.razonBloqueo;
+    const resumen = previa.montoPenalizacion > 0
+      ? ` Faltaban menos de 24 horas: el anticipo de Bs ${previa.montoPenalizacion} se libera al trabajador (RN-12).`
+      : previa.montoReembolso > 0 ? ` Se devuelve el anticipo de Bs ${previa.montoReembolso} al cliente (RN-12).` : '';
+    this.actualizar(id, (x) => ({ ...x, estado: 'CANCELADO' }), `El cliente canceló la solicitud (${motivo}).${resumen}`);
     return null;
   }
 
@@ -508,6 +527,41 @@ export class DatosService {
 
   private buscarPedido(id: number): Pedido {
     return this.pedidos().find((p) => p.id === id)!;
+  }
+
+  // Versión simple de las reglas de cancelación del backend, para el modo demo
+  private previsualizarDemo(p: Pedido): PrevisualizacionCancelacion {
+    const redondear = (n: number) => Math.round(n * 100) / 100;
+    const anticipo = p.pagos.find((pg) => pg.tipo === 'ANTICIPO_25')?.monto ?? 0;
+    const c = this.cotizacionAceptada(p);
+    const horas = p.estado === 'APROBADO' && c ? redondear((new Date(c.fechaInicio).getTime() - Date.now()) / 3600000) : null;
+    const base = {
+      idSolicitud: p.id,
+      estadoActual: p.estado,
+      horasAnticipacion: horas,
+      montoAnticipo: anticipo,
+      porcentajePenalizacion: 0,
+      montoPenalizacion: 0,
+      montoReembolso: 0,
+    };
+    if (p.estado !== 'PENDIENTE' && p.estado !== 'APROBADO') {
+      return { ...base, puedeCancelar: false, razonBloqueo: 'Este pedido ya no se puede cancelar en su estado actual.', consecuencias: [] };
+    }
+    const porcentaje = anticipo > 0 && horas !== null && horas < 24 ? 100 : 0;
+    const penalizacion = redondear((anticipo * porcentaje) / 100);
+    const consecuencias = ['La solicitud pasará a estado Cancelado. Esta acción no se puede deshacer.'];
+    if (porcentaje > 0) consecuencias.push(`Faltan menos de 24 h: el anticipo (Bs ${anticipo}) se entrega al trabajador. No hay reembolso.`);
+    else if (anticipo > 0) consecuencias.push(`No hay penalización: se reembolsa el anticipo completo (Bs ${anticipo}).`);
+    else consecuencias.push('No hay penalización.');
+    return {
+      ...base,
+      puedeCancelar: true,
+      razonBloqueo: null,
+      porcentajePenalizacion: porcentaje,
+      montoPenalizacion: penalizacion,
+      montoReembolso: redondear(anticipo - penalizacion),
+      consecuencias,
+    };
   }
 
   // Cambia un pedido y deja el evento en su historial

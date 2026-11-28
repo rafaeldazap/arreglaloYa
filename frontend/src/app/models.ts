@@ -88,6 +88,28 @@ export interface Reclamo {
   resolucion?: string;
 }
 
+export type MotivoCancelacion =
+  | 'CAMBIO_DE_PLANES'
+  | 'ENCONTRE_OTRO_TRABAJADOR'
+  | 'PRECIO_ELEVADO'
+  | 'PROBLEMA_RESUELTO'
+  | 'DEMORA_DEL_TRABAJADOR'
+  | 'OTRO';
+
+// Lo que devuelve GET /solicitudes/:id/cancelacion/previsualizar
+export interface PrevisualizacionCancelacion {
+  idSolicitud: number;
+  puedeCancelar: boolean;
+  razonBloqueo: string | null;
+  estadoActual: string;
+  horasAnticipacion: number | null;
+  montoAnticipo: number;
+  porcentajePenalizacion: number;
+  montoPenalizacion: number;
+  montoReembolso: number;
+  consecuencias: string[];
+}
+
 export interface EventoHistorial {
   fecha: string;
   descripcion: string;
