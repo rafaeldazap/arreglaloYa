@@ -545,7 +545,7 @@ export class DatosService {
       montoPenalizacion: 0,
       montoReembolso: 0,
     };
-    if (p.estado !== 'PENDIENTE' && p.estado !== 'APROBADO') {
+    if (p.estado !== 'PENDIENTE' && p.estado !== 'BAJO_REVISION' && p.estado !== 'APROBADO') {
       return { ...base, puedeCancelar: false, razonBloqueo: 'Este pedido ya no se puede cancelar en su estado actual.', consecuencias: [] };
     }
     const porcentaje = anticipo > 0 && horas !== null && horas < 24 ? 100 : 0;

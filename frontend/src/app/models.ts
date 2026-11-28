@@ -4,6 +4,7 @@ export type EstadoCuenta = 'REVISION' | 'ACTIVO' | 'SUSPENDIDO' | 'BLOQUEADO_PER
 
 export type EstadoPedido =
   | 'PENDIENTE'
+  | 'BAJO_REVISION'
   | 'APROBADO'
   | 'EN_PROCESO'
   | 'FINALIZADO'

@@ -61,7 +61,7 @@ export class MisPedidos {
   }
 
   puedeCancelar(p: Pedido): boolean {
-    return p.estado === 'PENDIENTE' || p.estado === 'APROBADO';
+    return p.estado === 'PENDIENTE' || p.estado === 'BAJO_REVISION' || p.estado === 'APROBADO';
   }
 
   puedeReclamar(p: Pedido): boolean {
