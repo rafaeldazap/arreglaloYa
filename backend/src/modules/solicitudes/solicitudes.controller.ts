@@ -9,9 +9,10 @@ import {
   UseGuards,
   ParseIntPipe,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { SolicitudesService } from './solicitudes.service';
 import { CrearSolicitudDto } from './dto/crear-solicitud.dto';
+import { CancelarSolicitudDto } from './dto/cancelar-solicitud.dto';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -67,13 +68,12 @@ export class SolicitudesController {
 
   @Patch(':id/cancelar')
   @ApiOperation({ summary: 'Cancelar solicitud por el cliente aplicando regla del 25% (CU-10, RN-12)' })
-  @ApiQuery({ name: 'motivo', required: false, type: String })
   cancelar(
     @Param('id', ParseIntPipe) id: number,
-    @Query('motivo') motivo: string,
+    @Body() dto: CancelarSolicitudDto,
     @CurrentUser() usuario: Usuario,
   ) {
-    return this.solicitudesService.cancelar(id, motivo, usuario);
+    return this.solicitudesService.cancelar(id, dto, usuario);
   }
 
   @Post('expirar-vencidas')
