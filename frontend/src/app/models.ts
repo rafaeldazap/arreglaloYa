@@ -1,4 +1,4 @@
-export type Rol = 'CLIENTE' | 'TRABAJADOR' | 'ADMIN';
+﻿export type Rol = 'CLIENTE' | 'TRABAJADOR' | 'ADMIN';
 
 export type EstadoCuenta = 'REVISION' | 'ACTIVO' | 'SUSPENDIDO' | 'BLOQUEADO_PERMANENTE';
 
@@ -19,7 +19,7 @@ export interface Usuario {
 }
 
 export interface Catalogo {
-  id?: number; // id en la base de datos (versión con backend)
+  id?: number; // id en la base de datos (versiÃ³n con backend)
   nombre: string;
   activa: boolean;
 }
@@ -63,7 +63,7 @@ export interface Cotizacion {
 
 export interface Pago {
   id?: number;
-  tipo: 'ANTICIPO_25' | 'SALDO_75';
+  tipo: 'ANTICIPO_25' | 'SALDO_75' | 'PARCIAL';
   medio: 'PASARELA_APP' | 'EFECTIVO' | 'QR_TRABAJADOR';
   monto: number;
   confirmadoCliente: boolean;
@@ -113,3 +113,4 @@ export interface Pedido {
   reclamo?: Reclamo;
   historial: EventoHistorial[];
 }
+

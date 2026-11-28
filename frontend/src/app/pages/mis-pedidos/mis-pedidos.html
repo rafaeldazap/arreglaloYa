@@ -1,3 +1,4 @@
+
 <div class="contenedor">
   <div class="encabezado">
     <h1>Mis pedidos</h1>
@@ -28,7 +29,6 @@
         </div>
       }
 
-      <!-- PENDIENTE: cotizaciones recibidas -->
       @if (p.estado === 'PENDIENTE') {
         <h4>Cotizaciones recibidas</h4>
         @for (c of cotizacionesPendientes(p); track c.id) {
@@ -38,60 +38,73 @@
               <span>Trabajo: <b>Bs {{ c.monto }}</b> {{ c.incluyeMateriales ? '(con materiales)' : '(sin materiales)' }}</span>
               @if (c.requiereVisita) { <span>Visita previa: Bs {{ c.costoVisita }}</span> }
               <span>Fecha: {{ fechaHora(c.fechaInicio) }} · {{ c.duracionHoras }} h</span>
-              <span class="total">Total Bs {{ datos.total(c) }} · Anticipo 25%: Bs {{ datos.anticipo(c) }}</span>
+              <span class="total">Total acordado: Bs {{ datos.total(c) }}</span>
             </div>
-            @if (panel()?.tipo === 'pagar' && panel()?.cotizacion === c.id) {
-              <div class="pago">
-                <p><b>Pago del anticipo (simulado)</b><br />Se cobrarán <b>Bs {{ datos.anticipo(c) }}</b> por la pasarela de la plataforma. El saldo de Bs {{ datos.saldo(c) }} se paga al trabajador al terminar.</p>
-                @if (error()) { <p class="error">{{ error() }}</p> }
-                <div class="acciones">
-                  <button class="btn" (click)="pagarYAceptar(p, c.id)">Pagar Bs {{ datos.anticipo(c) }}</button>
-                  <button class="btn btn-gris" (click)="abrir(null)">Volver</button>
-                </div>
-              </div>
-            } @else {
-              <div class="acciones">
-                <button class="btn" (click)="abrir({ pedido: p.id, tipo: 'pagar', cotizacion: c.id })">Aceptar</button>
-                <button class="btn btn-gris" (click)="datos.rechazarCotizacion(p.id, c.id)">Rechazar</button>
-              </div>
-            }
+            <div class="acciones">
+              <button class="btn" (click)="pagarYAceptar(p, c.id)">Aceptar cotización</button>
+              <button class="btn btn-gris" (click)="datos.rechazarCotizacion(p.id, c.id)">Rechazar</button>
+            </div>
           </div>
         } @empty {
           <p class="ayuda">Todavía no llegaron cotizaciones. Te avisaremos cuando un trabajador de tu zona responda.</p>
         }
+        @if (error()) { <p class="error">{{ error() }}</p> }
       }
 
-      <!-- APROBADO -->
-      @if (p.estado === 'APROBADO') {
+      @if (p.estado === 'APROBADO' || p.estado === 'EN_PROCESO') {
         @if (datos.cotizacionAceptada(p); as c) {
-          <p class="aviso">{{ p.trabajador }} vendrá el <b>{{ fechaHora(c.fechaInicio) }}</b>. Anticipo pagado: Bs {{ datos.anticipo(c) }}. Saldo al terminar: Bs {{ datos.saldo(c) }}.</p>
+          <div class="pago">
+            <h4>Seguimiento financiero</h4>
+            <p>Total acordado: <b>Bs {{ datos.total(c) }}</b></p>
+            <p>Total pagado: <b>Bs {{ totalPagado(p) }}</b></p>
+            <p>Saldo pendiente: <b>Bs {{ saldoPendiente(p) }}</b></p>
+
+            @if (saldoPendiente(p) > 0) {
+              @if (panel()?.tipo === 'abonar' && panel()?.pedido === p.id) {
+                <label for="monto-abono-{{ p.id }}">Importe del abono (Bs)</label>
+                <input id="monto-abono-{{ p.id }}" type="number" min="0.01" [max]="saldoPendiente(p)" step="0.01" [(ngModel)]="montoAbono" placeholder="Ingresa el importe">
+                <label for="medio-abono-{{ p.id }}">Medio de pago</label>
+                <select id="medio-abono-{{ p.id }}" [(ngModel)]="medioPago">
+                  <option value="EFECTIVO">Efectivo</option>
+                  <option value="QR_TRABAJADOR">QR del trabajador</option>
+                </select>
+                @if (error()) { <p class="error">{{ error() }}</p> }
+                <div class="acciones">
+                  <button class="btn" (click)="registrarAbono(p)">Registrar abono</button>
+                  <button class="btn btn-gris" (click)="abrir(null)">Volver</button>
+                </div>
+              } @else {
+                <button class="btn" (click)="abrir({ pedido: p.id, tipo: 'abonar' })">Registrar pago parcial</button>
+              }
+            } @else {
+              <p class="aviso">El servicio está completamente pagado.</p>
+            }
+          </div>
         }
       }
 
-      <!-- EN PROCESO: conformidad y pago del saldo -->
+      @if (p.estado === 'APROBADO') {
+        @if (datos.cotizacionAceptada(p); as c) {
+          <p class="aviso">{{ p.trabajador }} vendrá el <b>{{ fechaHora(c.fechaInicio) }}</b>. La cotización ha sido aceptada.</p>
+        }
+      }
+
       @if (p.estado === 'EN_PROCESO') {
         @if (!p.trabajoTerminado) {
           <p class="aviso">El trabajador está realizando el servicio.</p>
-        } @else if (!saldoDeclarado(p)) {
-          @if (datos.cotizacionAceptada(p); as c) {
-            <div class="pago">
-              <p><b>El trabajador terminó.</b> Revisa el trabajo y, si estás conforme, paga el saldo de <b>Bs {{ datos.saldo(c) }}</b> directo al trabajador.</p>
-              <label for="medio-{{ p.id }}">¿Cómo pagaste?</label>
-              <select id="medio-{{ p.id }}" [(ngModel)]="medioPago">
-                <option value="EFECTIVO">Efectivo</option>
-                <option value="QR_TRABAJADOR">QR del trabajador</option>
-              </select>
-              <div class="acciones">
-                <button class="btn" (click)="firmarConformidad(p)">Firmar conformidad y confirmar pago</button>
-              </div>
-            </div>
-          }
         } @else {
-          <p class="aviso">Firmaste la conformidad. Falta que el trabajador confirme que recibió el pago.</p>
+          <div class="pago">
+            <p><b>El trabajador terminó.</b> Revisa el trabajo y confirma la finalización.</p>
+            <label for="medio-{{ p.id }}">Medio de pago utilizado</label>
+            <select id="medio-{{ p.id }}" [(ngModel)]="medioPago">
+              <option value="EFECTIVO">Efectivo</option>
+              <option value="QR_TRABAJADOR">QR del trabajador</option>
+            </select>
+            <button class="btn" (click)="firmarConformidad(p)">Firmar conformidad y confirmar pago</button>
+          </div>
         }
       }
 
-      <!-- FINALIZADO: calificación -->
       @if (p.estado === 'FINALIZADO') {
         @if (p.calificacion; as cal) {
           <p class="aviso">Tu calificación: <span class="estrellas">{{ estrellas(cal.puntaje) }}</span> {{ cal.comentario }}</p>
@@ -105,16 +118,17 @@
             </div>
             <textarea rows="2" [(ngModel)]="comentario" placeholder="Comentario (opcional)"></textarea>
             @if (error() && panel() === null) { <p class="error">{{ error() }}</p> }
-            <div class="acciones"><button class="btn" (click)="calificar(p)">Enviar calificación</button></div>
+            <button class="btn" (click)="calificar(p)">Enviar calificación</button>
           </div>
         }
       }
 
-      <!-- Reclamo -->
       @if (p.reclamo; as r) {
         <p class="reclamo">Reclamo ({{ motivos[r.motivo] }}): <b>{{ r.estado === 'EN_REVISION' ? 'en revisión' : r.estado === 'PROCEDENTE' ? 'procedente' : 'improcedente' }}</b>
-          @if (r.resolucion) { — {{ r.resolucion }} }</p>
+          @if (r.resolucion) { — {{ r.resolucion }} }
+        </p>
       }
+
       @if (panel()?.tipo === 'reclamo' && panel()?.pedido === p.id) {
         <div class="pago">
           <label for="motivo-{{ p.id }}">Motivo</label>
@@ -146,9 +160,7 @@
       <div class="acciones">
         @if (puedeCancelar(p)) {
           @if (panel()?.tipo === 'cancelar' && panel()?.pedido === p.id) {
-            <span>¿Seguro que quieres cancelar?
-              @if (p.estado === 'APROBADO') { Con menos de 24 horas de anticipación, el anticipo se le entrega al trabajador. }
-            </span>
+            <span>¿Seguro que quieres cancelar?</span>
             <button class="btn btn-peligro" (click)="cancelar(p)">Sí, cancelar</button>
             <button class="btn btn-gris" (click)="abrir(null)">No</button>
           } @else {
