@@ -321,6 +321,28 @@ export class SolicitudesService {
     };
   }
 
+  private validarClienteDuenoOAdmin(s: SolicitudServicio, usuario: Usuario) {
+    if (s.cliente?.idUsuario !== usuario.idUsuario && usuario.rol !== RolUsuario.ADMIN) {
+      throw new ForbiddenException(
+        'Solo el cliente que creó la solicitud (o un administrador) puede cancelarla',
+      );
+    }
+  }
+
+  // CU-10: Muestra lo que pasaría al cancelar, sin modificar nada
+  async previsualizarCancelacion(id: number, usuario: Usuario) {
+    const manager = this.dataSource.manager;
+    const s = await manager.findOne(SolicitudServicio, {
+      where: { idSolicitud: id },
+      relations: ['cliente'],
+    });
+    if (!s) throw new NotFoundException(`Solicitud no encontrada con ID: ${id}`);
+
+    this.validarClienteDuenoOAdmin(s, usuario);
+
+    return { idSolicitud: s.idSolicitud, ...(await this.calcularConsecuencias(s, manager)) };
+  }
+
   // CU-10: Cancelar solicitud por el cliente (RN-03, RN-12)
   async cancelar(id: number, motivo: string, usuario: Usuario) {
     const resultado = await this.dataSource.transaction(async (manager) => {

@@ -59,6 +59,12 @@ export class SolicitudesController {
     return this.solicitudesService.consultarHistorial(id, usuario);
   }
 
+  @Get(':id/cancelacion/previsualizar')
+  @ApiOperation({ summary: 'Previsualizar las consecuencias de cancelar la solicitud sin modificarla (CU-10, RN-12)' })
+  previsualizarCancelacion(@Param('id', ParseIntPipe) id: number, @CurrentUser() usuario: Usuario) {
+    return this.solicitudesService.previsualizarCancelacion(id, usuario);
+  }
+
   @Patch(':id/cancelar')
   @ApiOperation({ summary: 'Cancelar solicitud por el cliente aplicando regla del 25% (CU-10, RN-12)' })
   @ApiQuery({ name: 'motivo', required: false, type: String })
