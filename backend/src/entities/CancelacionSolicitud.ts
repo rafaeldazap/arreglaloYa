@@ -17,12 +17,12 @@ export class CancelacionSolicitud {
   @PrimaryGeneratedColumn({ name: 'id_cancelacion' })
   idCancelacion: number;
 
-  @OneToOne(() => SolicitudServicio, { onDelete: 'CASCADE' })
+  @OneToOne(() => SolicitudServicio, { nullable: false, onDelete: 'CASCADE' })
   @JoinColumn({ name: 'id_solicitud' })
   solicitud: SolicitudServicio;
 
   // Usuario que realizó la cancelación (el cliente dueño o un ADMIN)
-  @ManyToOne(() => Usuario, { eager: true })
+  @ManyToOne(() => Usuario, { nullable: false, eager: true })
   @JoinColumn({ name: 'id_usuario' })
   usuario: Usuario;
 
