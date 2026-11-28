@@ -8,6 +8,7 @@ import { NuevaSolicitud } from './pages/nueva-solicitud/nueva-solicitud';
 import { MisPedidos } from './pages/mis-pedidos/mis-pedidos';
 import { PanelTrabajador } from './pages/panel-trabajador/panel-trabajador';
 import { Admin } from './pages/admin/admin';
+import { Escalamiento } from './pages/escalamiento/escalamiento';
 import { rolGuard } from './services/rol.guard';
 
 export const routes: Routes = [
@@ -20,5 +21,6 @@ export const routes: Routes = [
   { path: 'mis-pedidos', component: MisPedidos, canActivate: [rolGuard('CLIENTE')] },
   { path: 'panel-trabajador', component: PanelTrabajador, canActivate: [rolGuard('TRABAJADOR')] },
   { path: 'admin', component: Admin, canActivate: [rolGuard('ADMIN')] },
+  { path: 'admin/escalamiento', component: Escalamiento, canActivate: [rolGuard('ADMIN')] },
   { path: '**', redirectTo: '' },
 ];

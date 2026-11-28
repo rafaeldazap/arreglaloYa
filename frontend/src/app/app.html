@@ -14,7 +14,8 @@
             <a routerLink="/panel-trabajador" routerLinkActive="activo">Mi panel</a>
           }
           @case ('ADMIN') {
-            <a routerLink="/admin" routerLinkActive="activo">Administración</a>
+            <a routerLink="/admin" routerLinkActive="activo" [routerLinkActiveOptions]="{ exact: true }">Administración</a>
+            <a routerLink="/admin/escalamiento" routerLinkActive="activo">Escalamiento</a>
           }
         }
         <span class="saludo">Hola, {{ u.nombre }}</span>
