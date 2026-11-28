@@ -1,0 +1,191 @@
+<div class="contenedor">
+  <h1>Escalamiento de reclamos</h1>
+  <p class="ayuda">
+    Los reclamos sin resolver que superan el plazo se escalan automáticamente. Desde aquí puedes cambiar el plazo,
+    asignar un responsable y revisar el historial de decisiones.
+  </p>
+
+  @if (error()) { <p class="error" role="alert">{{ error() }}</p> }
+  @if (aviso()) { <p class="ok" role="status">{{ aviso() }}</p> }
+
+  <!-- Plazo configurable -->
+  <div class="tarjeta configuracion">
+    <div>
+      <h3>Plazo máximo para resolver un reclamo</h3>
+      @if (config(); as c) {
+        <p class="ayuda">
+          Actual: <b>{{ c.descripcion }}</b>
+          @if (c.actualizadoPor) { · cambiado por {{ c.actualizadoPor.nombreCompleto }} el {{ fechaHora(c.fechaActualizacion) }} }
+        </p>
+      }
+    </div>
+        <div class="plazo-form">
+      <div class="plazo-campos">
+        <div>
+          <label for="p-dias">Días</label>
+          <input id="p-dias" type="number" min="0" max="365" [(ngModel)]="dias" />
+        </div>
+        <div>
+          <label for="p-horas">Horas</label>
+          <input id="p-horas" type="number" min="0" max="23" [(ngModel)]="horas" />
+        </div>
+        <div>
+          <label for="p-min">Minutos</label>
+          <input id="p-min" type="number" min="0" max="59" [(ngModel)]="minutos" />
+        </div>
+      </div>
+      <p class="ayuda">Plazo total: <b>{{ describir(plazoTotal) }}</b></p>
+      <button class="btn btn-secundario" (click)="guardarPlazo()" [disabled]="plazoTotal < 1 || plazoTotal > 525600">Guardar plazo</button>
+    </div>
+  </div>
+
+  <!-- Resumen -->
+  @if (resumen(); as r) {
+    <div class="resumen">
+      <div class="tarjeta dato"><span>En plazo</span><b>{{ r.enPlazo }}</b></div>
+      <div class="tarjeta dato alerta"><span>Escalados</span><b>{{ r.escalados }}</b></div>
+      <div class="tarjeta dato"><span>Resueltos</span><b>{{ r.resueltos }}</b></div>
+      <div class="tarjeta dato"><span>Abiertos sin responsable</span><b>{{ r.abiertosSinResponsable }}</b></div>
+    </div>
+  }
+
+  <!-- Filtros -->
+  <div class="filtros">
+    <div>
+      <label for="f-estado">Estado</label>
+      <select id="f-estado" [(ngModel)]="filtroEstado" (change)="aplicarFiltros()">
+        <option value="">Todos</option>
+        <option value="ESCALADO">Escalados</option>
+        <option value="EN_PLAZO">En plazo</option>
+        <option value="RESUELTO">Resueltos</option>
+      </select>
+    </div>
+    <div>
+      <label for="f-resp">Responsable</label>
+      <select id="f-resp" [(ngModel)]="filtroResponsable" (change)="aplicarFiltros()">
+        <option value="">Todos</option>
+        <option value="SIN">Sin responsable</option>
+        @for (a of admins(); track a.idUsuario) {
+          <option [value]="a.idUsuario">{{ a.nombreCompleto }}</option>
+        }
+      </select>
+    </div>
+    <button class="btn btn-gris" (click)="verificarAhora()">Verificar vencidos ahora</button>
+  </div>
+
+  <!-- Tabla -->
+  <div class="tabla-scroll">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th><th>Motivo</th><th>Partes</th><th>Registrado</th><th>Estado</th><th>Plazo</th><th>Responsable</th><th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (f of filas(); track f.idReclamo) {
+          <tr [class.fila-escalada]="f.estadoEscalamiento === 'ESCALADO'" [class.fila-activa]="seleccionado()?.idReclamo === f.idReclamo">
+            <td>{{ f.idReclamo }}</td>
+            <td>{{ motivos[f.motivo] || f.motivo }}</td>
+            <td>{{ f.denunciante?.nombreCompleto }} → {{ f.denunciado?.nombreCompleto }}</td>
+            <td>{{ fechaHora(f.fechaCreacion) }}</td>
+            <td><span [class]="'estado ' + f.estadoEscalamiento">{{ nombreEstado(f.estadoEscalamiento) }}</span></td>
+            <td>{{ textoPlazo(f) }}</td>
+            <td>{{ f.responsable?.nombreCompleto ?? 'Sin asignar' }}</td>
+            <td><button class="btn btn-gris chico" (click)="seleccionar(f)">Gestionar</button></td>
+          </tr>
+        } @empty {
+          <tr><td colspan="8">No hay reclamos con esos filtros.</td></tr>
+        }
+      </tbody>
+    </table>
+  </div>
+
+  <div class="paginacion">
+    <button class="btn btn-gris chico" (click)="cambiarPagina(-1)" [disabled]="pagina() <= 1">‹ Anterior</button>
+    <span>Página {{ pagina() }} de {{ totalPaginas() }} · {{ total() }} reclamo(s)</span>
+    <button class="btn btn-gris chico" (click)="cambiarPagina(1)" [disabled]="pagina() >= totalPaginas()">Siguiente ›</button>
+  </div>
+
+  <!-- Panel de gestión -->
+  @if (seleccionado(); as s) {
+    <div class="tarjeta panel">
+      <div class="fila">
+        <div>
+          <h2>Reclamo #{{ s.idReclamo }} · {{ motivos[s.motivo] || s.motivo }}</h2>
+          <p class="ayuda">
+            Solicitud #{{ s.idSolicitud }} · {{ s.denunciante?.nombreCompleto }} denuncia a {{ s.denunciado?.nombreCompleto }}
+            · Registrado {{ fechaHora(s.fechaCreacion) }} · Límite {{ fechaHora(s.fechaLimite) }}
+          </p>
+          @if (s.descripcion) { <p>{{ s.descripcion }}</p> }
+          <p>
+            <span [class]="'estado ' + s.estadoEscalamiento">{{ nombreEstado(s.estadoEscalamiento) }}</span>
+            · Responsable: <b>{{ s.responsable?.nombreCompleto ?? 'Sin asignar' }}</b>
+          </p>
+        </div>
+        <button class="btn btn-gris chico" (click)="cerrarPanel()">Cerrar</button>
+      </div>
+
+      @if (s.estadoResolucion === 'EN_REVISION') {
+        <div class="acciones-grid">
+          <div class="caja">
+            <h3>Reasignar responsable</h3>
+            <label for="nuevo-resp">Nuevo responsable</label>
+            <select id="nuevo-resp" [(ngModel)]="idResponsableNuevo">
+              <option [ngValue]="null">Elegir administrador…</option>
+              @for (a of admins(); track a.idUsuario) {
+                <option [ngValue]="a.idUsuario">{{ a.nombreCompleto }}</option>
+              }
+            </select>
+            <label for="mot-reasig">Motivo (obligatorio)</label>
+            <input id="mot-reasig" [(ngModel)]="motivoReasignar" placeholder="Ej.: Requiere revisión de otro administrador" />
+            <div class="acciones">
+              <button class="btn btn-secundario" (click)="reasignar()" [disabled]="idResponsableNuevo === null || motivoReasignar.trim().length < 5">Reasignar</button>
+            </div>
+          </div>
+
+          <div class="caja">
+            <h3>Escalar manualmente</h3>
+            @if (s.estadoEscalamiento === 'ESCALADO') {
+              <p class="ayuda">Este reclamo ya está escalado.</p>
+            } @else {
+              <label for="mot-esc">Motivo (obligatorio)</label>
+              <input id="mot-esc" [(ngModel)]="motivoEscalar" placeholder="Ej.: Caso urgente" />
+              <div class="acciones">
+                <button class="btn" (click)="escalar()" [disabled]="motivoEscalar.trim().length < 5">Escalar</button>
+              </div>
+            }
+          </div>
+
+          <div class="caja">
+            <h3>Resolver reclamo</h3>
+            <label for="res">Resolución</label>
+            <select id="res" [(ngModel)]="resolucion">
+              <option value="PROCEDENTE">Procedente (sanciona al denunciado)</option>
+              <option value="IMPROCEDENTE">Improcedente</option>
+            </select>
+            <label for="com">Comentario (opcional)</label>
+            <input id="com" [(ngModel)]="comentarioResolver" placeholder="Qué se decidió y por qué" />
+            <div class="acciones">
+              <button class="btn btn-peligro" (click)="resolver()">Resolver</button>
+            </div>
+          </div>
+        </div>
+      } @else {
+        <p class="ayuda">Este reclamo ya fue resuelto ({{ s.estadoResolucion }}); no admite más gestiones, pero su historial se conserva.</p>
+      }
+
+      <h3>Historial de decisiones</h3>
+      <ol class="linea">
+        @for (e of eventos(); track e.idDecision) {
+          <li>
+            <span class="tipo" [class]="'tipo ' + e.tipo">{{ nombreTipo(e.tipo) }}</span>
+            <span class="meta">{{ fechaHora(e.fecha) }} · {{ e.administrador?.nombreCompleto ?? 'Sistema' }}</span>
+            <p>{{ e.detalle }}</p>
+          </li>
+        } @empty {
+          <li class="vacio">Todavía no hay decisiones registradas para este reclamo.</li>
+        }
+      </ol>
+    </div>
+  }
+</div>

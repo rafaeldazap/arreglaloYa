@@ -5,6 +5,7 @@ import {
   OneToOne,
   ManyToOne,
   JoinColumn,
+  CreateDateColumn,
 } from 'typeorm';
 import { SolicitudServicio } from './SolicitudServicio';
 import { Usuario } from './Usuario';
@@ -46,4 +47,8 @@ export class ReclamoSancion {
 
   @Column({ name: 'dias_suspension', type: 'int', default: 0 })
   diasSuspension: number;
+
+  // Fecha de registro del reclamo: sirve para medir el plazo de resolución (escalamiento)
+  @CreateDateColumn({ name: 'fecha_creacion', type: 'timestamptz' })
+  fechaCreacion: Date;
 }

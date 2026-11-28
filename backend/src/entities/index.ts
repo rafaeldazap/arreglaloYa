@@ -10,3 +10,6 @@ export * from './TransaccionPago';
 export * from './ReclamoSancion';
 export * from './Calificacion';
 export * from './HistorialEstado';
+export * from './ConfiguracionEscalamiento';
+export * from './GestionReclamo';
+export * from './DecisionReclamo';
