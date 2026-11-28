@@ -1,4 +1,4 @@
-import {
+﻿import {
   Injectable,
   NotFoundException,
   BadRequestException,
@@ -50,7 +50,7 @@ export class PagosService {
       const montoTotalServicio = Number(solicitud.montoOfrecido || 0);
       if (montoTotalServicio <= 0) {
         throw new BadRequestException(
-          'La solicitud no tiene un monto acordado válido para procesar pagos',
+          'La solicitud no tiene un monto acordado vÃ¡lido para procesar pagos',
         );
       }
 
@@ -92,7 +92,7 @@ export class PagosService {
         const savedPago = await manager.save(TransaccionPago, pago);
 
         // La solicitud sigue APROBADO: pasa a EN_PROCESO cuando el trabajador inicia el servicio
-        // (así la regla RN-12 de cancelación con anticipo pagado sí puede aplicarse)
+        // (asÃ­ la regla RN-12 de cancelaciÃ³n con anticipo pagado sÃ­ puede aplicarse)
         const historial = manager.create(HistorialEstado, {
           solicitud,
           usuario: cliente,
@@ -100,6 +100,63 @@ export class PagosService {
           estadoNuevo: EstadoSolicitud.APROBADO,
           descripcion: `Anticipo del 25% (${anticipoEsperado} Bs) abonado y en custodia (RN-04).`,
         });
+        await manager.save(HistorialEstado, historial);
+
+        return savedPago;
+      } else if (dto.tipo === TipoPago.PARCIAL) {
+        if (
+          solicitud.estado !== EstadoSolicitud.APROBADO &&
+          solicitud.estado !== EstadoSolicitud.EN_PROCESO
+        ) {
+          throw new BadRequestException(
+            `Solo se permiten abonos en estado APROBADO o EN_PROCESO (actual: ${solicitud.estado})`,
+          );
+        }
+
+        if (!Number.isFinite(dto.monto) || dto.monto <= 0) {
+          throw new BadRequestException('El monto del abono debe ser mayor a cero');
+        }
+
+        const pagosExistentes = await manager.find(TransaccionPago, {
+          where: { solicitud: { idSolicitud: solicitud.idSolicitud } },
+        });
+
+        const totalPagado = pagosExistentes.reduce(
+          (suma, pago) => suma + Number(pago.monto),
+          0,
+        );
+
+        const saldoPendiente = Number(
+          (montoTotalServicio - totalPagado).toFixed(2),
+        );
+
+        if (dto.monto > saldoPendiente + 0.001) {
+          throw new BadRequestException(
+            `El abono supera el saldo pendiente de ${saldoPendiente} Bs`,
+          );
+        }
+
+        const pago = manager.create(TransaccionPago, {
+          solicitud,
+          tipo: TipoPago.PARCIAL,
+          medioPago: dto.medioPago,
+          monto: Number(dto.monto.toFixed(2)),
+          urlComprobante: dto.urlComprobante,
+          conformidadCliente: true,
+          confirmadoPorTrabajador: false,
+          liberadoAlTrabajador: false,
+        });
+
+        const savedPago = await manager.save(TransaccionPago, pago);
+
+        const historial = manager.create(HistorialEstado, {
+          solicitud,
+          usuario: cliente,
+          estadoAnterior: solicitud.estado,
+          estadoNuevo: solicitud.estado,
+          descripcion: `Abono parcial de ${dto.monto} Bs registrado. Total pagado: ${(totalPagado + dto.monto).toFixed(2)} Bs. Saldo pendiente: ${(saldoPendiente - dto.monto).toFixed(2)} Bs.`,
+        });
+
         await manager.save(HistorialEstado, historial);
 
         return savedPago;
@@ -143,7 +200,7 @@ export class PagosService {
           monto: saldoEsperado,
           urlComprobante: dto.urlComprobante,
           conformidadCliente: true,
-          confirmadoPorTrabajador: false, // Requiere confirmación explícita del técnico (RF-06)
+          confirmadoPorTrabajador: false, // Requiere confirmaciÃ³n explÃ­cita del tÃ©cnico (RF-06)
           liberadoAlTrabajador: false,
         });
 
@@ -154,7 +211,7 @@ export class PagosService {
           usuario: cliente,
           estadoAnterior: EstadoSolicitud.EN_PROCESO,
           estadoNuevo: EstadoSolicitud.EN_PROCESO,
-          descripcion: `Saldo (${saldoEsperado} Bs) registrado por el cliente mediante ${dto.medioPago}. Pendiente de confirmación del técnico.`,
+          descripcion: `Saldo (${saldoEsperado} Bs) registrado por el cliente mediante ${dto.medioPago}. Pendiente de confirmaciÃ³n del tÃ©cnico.`,
         });
         await manager.save(HistorialEstado, historial);
 
@@ -192,7 +249,7 @@ export class PagosService {
     return pagos.map((p) => sanitizePago(p));
   }
 
-  // CU-03, RN-04, RF-06: Confirmación del saldo por el técnico (Doble firma)
+  // CU-03, RN-04, RF-06: ConfirmaciÃ³n del saldo por el tÃ©cnico (Doble firma)
   async confirmarPorTrabajador(idPago: number, trabajadorUsuario: Usuario) {
     const resultado = await this.dataSource.transaction(async (manager) => {
       await manager
@@ -213,7 +270,7 @@ export class PagosService {
       });
 
       if (!pago) {
-        throw new NotFoundException('Transacción de pago no encontrada');
+        throw new NotFoundException('TransacciÃ³n de pago no encontrada');
       }
 
       const solicitud = pago.solicitud;
@@ -223,13 +280,13 @@ export class PagosService {
 
       if (!esTrabajadorAsignado && !esAdmin) {
         throw new ForbiddenException(
-          'Solo el técnico asignado a este servicio puede confirmar la recepción del pago',
+          'Solo el tÃ©cnico asignado a este servicio puede confirmar la recepciÃ³n del pago',
         );
       }
 
       if (pago.tipo !== TipoPago.SALDO_75) {
         throw new BadRequestException(
-          'Solo el pago de saldo (SALDO_75) requiere confirmación de doble firma para finalizar y liberar el anticipo',
+          'Solo el pago de saldo (SALDO_75) requiere confirmaciÃ³n de doble firma para finalizar y liberar el anticipo',
         );
       }
 
@@ -265,7 +322,7 @@ export class PagosService {
         estadoAnterior: EstadoSolicitud.EN_PROCESO,
         estadoNuevo: EstadoSolicitud.FINALIZADO,
         descripcion:
-          'Doble conformidad registrada: El trabajador confirmó la recepción del saldo. Servicio FINALIZADO y anticipo del 25% liberado (RN-04, CU-03).',
+          'Doble conformidad registrada: El trabajador confirmÃ³ la recepciÃ³n del saldo. Servicio FINALIZADO y anticipo del 25% liberado (RN-04, CU-03).',
       });
       await manager.save(HistorialEstado, historial);
 
@@ -279,3 +336,5 @@ export class PagosService {
     };
   }
 }
+
+

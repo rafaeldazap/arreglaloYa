@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+﻿import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { EstadoPedido, MotivoReclamo, Pago, Pedido } from '../../models';
@@ -6,8 +6,11 @@ import { AuthService } from '../../services/auth.service';
 import { DatosService } from '../../services/datos.service';
 import { estrellas, fechaHora, nombresEstado, nombresMotivo } from '../../formato';
 
-// Qué panel está abierto en cada pedido (solo uno a la vez)
-type Panel = { pedido: number; tipo: 'pagar' | 'cancelar' | 'reclamo'; cotizacion?: number } | null;
+type Panel = {
+  pedido: number;
+  tipo: 'abonar' | 'cancelar' | 'reclamo';
+  cotizacion?: number;
+} | null;
 
 @Component({
   selector: 'app-mis-pedidos',
@@ -22,14 +25,19 @@ export class MisPedidos {
   estrellas = estrellas;
   nombres = nombresEstado;
   motivos = nombresMotivo;
+
   pasos: EstadoPedido[] = ['PENDIENTE', 'APROBADO', 'EN_PROCESO', 'FINALIZADO'];
 
-  misPedidos = computed(() => this.datos.pedidos().filter((p) => p.cliente === this.auth.usuario()?.nombre));
+  misPedidos = computed(() =>
+    this.datos.pedidos().filter(
+      (p) => p.cliente === this.auth.usuario()?.nombre,
+    ),
+  );
 
   panel = signal<Panel>(null);
   error = signal('');
-
   medioPago: Pago['medio'] = 'EFECTIVO';
+  montoAbono = 0;
   puntaje = signal(0);
   comentario = '';
   motivo: MotivoReclamo = 'MAL_ARREGLO';
@@ -49,21 +57,62 @@ export class MisPedidos {
   }
 
   puedeReclamar(p: Pedido): boolean {
-    return !p.reclamo && (p.estado === 'APROBADO' || p.estado === 'EN_PROCESO' || p.estado === 'FINALIZADO');
+    return !p.reclamo && (
+      p.estado === 'APROBADO' ||
+      p.estado === 'EN_PROCESO' ||
+      p.estado === 'FINALIZADO'
+    );
   }
 
   cotizacionesPendientes(p: Pedido) {
     return p.cotizaciones.filter((c) => c.estado === 'PENDIENTE');
   }
 
-  saldoDeclarado(p: Pedido): Pago | undefined {
-    return p.pagos.find((pg) => pg.tipo === 'SALDO_75');
+  totalPagado(p: Pedido): number {
+    return this.datos.totalPagado(p);
+  }
+
+  saldoPendiente(p: Pedido): number {
+    return this.datos.saldoPendiente(p);
+  }
+
+  async registrarAbono(p: Pedido) {
+    const monto = Number(this.montoAbono);
+
+    if (!Number.isFinite(monto) || monto <= 0) {
+      this.error.set('Ingresa un importe mayor que cero.');
+      return;
+    }
+
+    if (monto > this.saldoPendiente(p)) {
+      this.error.set('El abono no puede superar el saldo pendiente.');
+      return;
+    }
+
+    const error = await this.datos.registrarPagoParcial(
+      p.id,
+      monto,
+      this.medioPago,
+    );
+
+    if (error) {
+      this.error.set(error);
+      return;
+    }
+
+    this.montoAbono = 0;
+    this.error.set('');
+    this.panel.set(null);
   }
 
   async pagarYAceptar(p: Pedido, cotizacionId: number) {
     const error = await this.datos.aceptarCotizacion(p.id, cotizacionId);
-    if (error) this.error.set(error);
-    else this.panel.set(null);
+
+    if (error) {
+      this.error.set(error);
+    } else {
+      this.panel.set(null);
+    }
   }
 
   async cancelar(p: Pedido) {
@@ -80,7 +129,13 @@ export class MisPedidos {
       this.error.set('Elige de 1 a 5 estrellas.');
       return;
     }
-    await this.datos.calificar(p.id, this.puntaje(), this.comentario.trim());
+
+    await this.datos.calificar(
+      p.id,
+      this.puntaje(),
+      this.comentario.trim(),
+    );
+
     this.puntaje.set(0);
     this.comentario = '';
     this.error.set('');
@@ -91,8 +146,15 @@ export class MisPedidos {
       this.error.set('Describe el problema con al menos 10 caracteres.');
       return;
     }
-    const error = await this.datos.reclamar(p.id, this.motivo, this.descripcionReclamo.trim());
+
+    const error = await this.datos.reclamar(
+      p.id,
+      this.motivo,
+      this.descripcionReclamo.trim(),
+    );
+
     if (error) return;
+
     this.descripcionReclamo = '';
     this.panel.set(null);
   }

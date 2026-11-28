@@ -1,4 +1,4 @@
-import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+﻿import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { computed, effect, inject, Injectable, signal, untracked } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
@@ -6,10 +6,10 @@ import { Catalogo, Cotizacion, EstadoPedido, MotivoReclamo, Pago, Pedido, Trabaj
 import { AuthService } from './auth.service';
 import { categoriasDemo, pedidosDemo, trabajadoresDemo, zonasDemo } from './datos-demo';
 
-// Todas las pantallas leen y cambian los datos SOLO a través de este servicio.
-// - Versión conectada (npm start): cada acción llama a la API REST del backend NestJS
-//   (/api/v1/...) y después vuelve a pedir los datos para que la pantalla se actualice.
-// - Versión demo (GitHub Pages): los mismos métodos trabajan con datos de prueba en memoria.
+// Todas las pantallas leen y cambian los datos SOLO a travÃ©s de este servicio.
+// - VersiÃ³n conectada (npm start): cada acciÃ³n llama a la API REST del backend NestJS
+//   (/api/v1/...) y despuÃ©s vuelve a pedir los datos para que la pantalla se actualice.
+// - VersiÃ³n demo (GitHub Pages): los mismos mÃ©todos trabajan con datos de prueba en memoria.
 
 function ahora(): string {
   return new Date().toLocaleString('es-BO');
@@ -23,7 +23,7 @@ export class DatosService {
   esDemo = environment.demo;
 
   cargando = signal(false);
-  // Último error que devolvió el servidor (se muestra como aviso en la parte superior)
+  // Ãšltimo error que devolviÃ³ el servidor (se muestra como aviso en la parte superior)
   errorApi = signal('');
 
   private listaCategorias = signal<Catalogo[]>(this.esDemo ? categoriasDemo.map((nombre) => ({ nombre, activa: true })) : []);
@@ -41,12 +41,12 @@ export class DatosService {
 
   pedidos = signal<Pedido[]>(this.esDemo ? pedidosDemo : []);
 
-  // Motivos de observación que escribió el admin en esta sesión (el backend no los guarda)
+  // Motivos de observaciÃ³n que escribiÃ³ el admin en esta sesiÃ³n (el backend no los guarda)
   private motivosRechazo = new Map<number, string>();
 
   constructor() {
     if (!this.esDemo) {
-      // Cada vez que alguien inicia o cierra sesión se vuelven a pedir los datos al backend
+      // Cada vez que alguien inicia o cierra sesiÃ³n se vuelven a pedir los datos al backend
       effect(() => {
         this.auth.usuario();
         untracked(() => this.recargar());
@@ -54,7 +54,7 @@ export class DatosService {
     }
   }
 
-  // ---------- Conexión con el backend ----------
+  // ---------- ConexiÃ³n con el backend ----------
 
   async recargar() {
     if (this.esDemo) return;
@@ -75,7 +75,7 @@ export class DatosService {
       this.errorApi.set('');
     } catch (e) {
       const err = e as HttpErrorResponse;
-      // Token vencido o inválido: se cierra la sesión
+      // Token vencido o invÃ¡lido: se cierra la sesiÃ³n
       if (err.status === 401 && usuario) this.auth.cerrarSesion();
       else this.errorApi.set(this.auth.mensajeError(err));
     } finally {
@@ -139,14 +139,14 @@ export class DatosService {
     return this.trabajadores().find((t) => t.correo === correo.toLowerCase());
   }
 
-  // Perfil de trabajador del usuario que inició sesión
+  // Perfil de trabajador del usuario que iniciÃ³ sesiÃ³n
   miPerfil(usuario: Usuario | null): Trabajador | undefined {
     if (!usuario) return undefined;
     if (this.esDemo) return this.trabajadorPorCorreo(usuario.correo);
     return this.trabajadores().find((t) => t.idUsuario === usuario.id);
   }
 
-  // Pedidos pendientes de su zona y especialidad que todavía no cotizó
+  // Pedidos pendientes de su zona y especialidad que todavÃ­a no cotizÃ³
   pedidosDisponibles(t: Trabajador): Pedido[] {
     return this.pedidos().filter(
       (p) =>
@@ -180,6 +180,67 @@ export class DatosService {
 
   saldo(c: Cotizacion): number {
     return Math.round((this.total(c) - this.anticipo(c)) * 100) / 100;
+  }
+  totalPagado(p: Pedido): number {
+    return Math.round(
+      p.pagos.reduce((suma, pago) => suma + pago.monto, 0) * 100,
+    ) / 100;
+  }
+
+  saldoPendiente(p: Pedido): number {
+    return Math.max(
+      0,
+      Math.round((p.montoOfrecido - this.totalPagado(p)) * 100) / 100,
+    );
+  }
+
+  async registrarPagoParcial(
+    pedidoId: number,
+    monto: number,
+    medio: Pago['medio'],
+  ): Promise<string | null> {
+    const p = this.buscarPedido(pedidoId);
+
+    if (!Number.isFinite(monto) || monto <= 0) {
+      return 'El monto debe ser mayor a cero.';
+    }
+
+    const saldo = this.saldoPendiente(p);
+
+    if (monto > saldo) {
+      return `El pago supera el saldo pendiente de Bs ${saldo}.`;
+    }
+
+    if (!this.esDemo) {
+      return this.accion(() =>
+        this.post('/pagos', {
+          idSolicitud: pedidoId,
+          tipo: 'PARCIAL',
+          medioPago: medio,
+          monto,
+        }),
+      );
+    }
+
+    this.actualizar(
+      pedidoId,
+      (x) => ({
+        ...x,
+        pagos: [
+          ...x.pagos,
+          {
+            tipo: 'PARCIAL',
+            medio,
+            monto,
+            confirmadoCliente: true,
+            confirmadoTrabajador: false,
+          },
+        ],
+      }),
+      `Se registró un pago parcial de Bs ${monto}.`,
+    );
+
+    return null;
   }
 
   // Agenda del trabajador: trabajos aprobados o en proceso, ordenados por fecha
@@ -277,44 +338,64 @@ export class DatosService {
     return null;
   }
 
-  // Acepta una cotización y paga el anticipo del 25% (pasarela simulada)
+  // Acepta una cotizaciÃ³n y paga el anticipo del 25% (pasarela simulada)
   async aceptarCotizacion(pedidoId: number, cotizacionId: number): Promise<string | null> {
     const p = this.buscarPedido(pedidoId);
     const c = p.cotizaciones.find((x) => x.id === cotizacionId)!;
-    const cruce = this.hayCruce(c.trabajadorId, c.fechaInicio, c.duracionHoras, p.id);
-    if (cruce) return `${c.trabajador} ya tiene otro trabajo en ese horario. Pídele otra fecha o elige otra cotización.`;
-    const anticipo = this.anticipo(c);
-    if (!this.esDemo) {
-      return this.accion(async () => {
-        await this.patch(`/cotizaciones/${cotizacionId}/responder?estado=ACEPTADA`);
-        await this.post('/pagos', { idSolicitud: pedidoId, tipo: 'ANTICIPO_25', medioPago: 'PASARELA_APP', monto: anticipo });
-      }, false);
+
+    const cruce = this.hayCruce(
+      c.trabajadorId,
+      c.fechaInicio,
+      c.duracionHoras,
+      p.id,
+    );
+
+    if (cruce) {
+      return `${c.trabajador} ya tiene otro trabajo en ese horario. Pídele otra fecha o elige otra cotización.`;
     }
-    this.actualizar(pedidoId, (x) => ({
-      ...x,
-      estado: 'APROBADO',
-      trabajadorId: c.trabajadorId,
-      trabajador: c.trabajador,
-      cotizaciones: x.cotizaciones.map((y) => ({ ...y, estado: y.id === c.id ? 'ACEPTADA' : 'RECHAZADA' })),
-      pagos: [{ tipo: 'ANTICIPO_25', medio: 'PASARELA_APP', monto: anticipo, confirmadoCliente: true, confirmadoTrabajador: true }],
-    }), `Cotización de ${c.trabajador} aceptada y anticipo de Bs ${anticipo} pagado. Se reveló la dirección al trabajador.`);
+
+    if (!this.esDemo) {
+      return this.accion(
+        () => this.patch(
+          `/cotizaciones/${cotizacionId}/responder?estado=ACEPTADA`,
+        ),
+        false,
+      );
+    }
+
+    this.actualizar(
+      pedidoId,
+      (x) => ({
+        ...x,
+        estado: 'APROBADO',
+        trabajadorId: c.trabajadorId,
+        trabajador: c.trabajador,
+        montoOfrecido: this.total(c),
+        cotizaciones: x.cotizaciones.map((y) => ({
+          ...y,
+          estado: y.id === c.id ? 'ACEPTADA' : 'RECHAZADA',
+        })),
+        pagos: [],
+      }),
+      `Cotización de ${c.trabajador} aceptada. Total acordado: Bs ${this.total(c)}.`,
+    );
+
     return null;
   }
-
   async rechazarCotizacion(pedidoId: number, cotizacionId: number) {
     if (!this.esDemo) return this.accion(() => this.patch(`/cotizaciones/${cotizacionId}/responder?estado=RECHAZADA`));
     this.actualizar(pedidoId, (x) => ({
       ...x,
       cotizaciones: x.cotizaciones.map((y) => (y.id === cotizacionId ? { ...y, estado: 'RECHAZADA' } : y)),
-    }), 'El cliente rechazó una cotización');
+    }), 'El cliente rechazÃ³ una cotizaciÃ³n');
     return null;
   }
 
-  // RN-12: con 24 horas o más de anticipación se devuelve el anticipo; con menos, se libera al trabajador
+  // RN-12: con 24 horas o mÃ¡s de anticipaciÃ³n se devuelve el anticipo; con menos, se libera al trabajador
   async cancelarPedido(id: number) {
     if (!this.esDemo) return this.accion(() => this.patch(`/solicitudes/${id}/cancelar`));
     const p = this.buscarPedido(id);
-    let detalle = 'El cliente canceló la solicitud';
+    let detalle = 'El cliente cancelÃ³ la solicitud';
     const c = this.cotizacionAceptada(p);
     if (p.estado === 'APROBADO' && c) {
       const horas = (new Date(c.fechaInicio).getTime() - Date.now()) / 3600000;
@@ -326,7 +407,7 @@ export class DatosService {
     return null;
   }
 
-  // Doble firma: el cliente confirma conformidad y pago del saldo; luego el trabajador confirma que lo recibió
+  // Doble firma: el cliente confirma conformidad y pago del saldo; luego el trabajador confirma que lo recibiÃ³
   async confirmarConformidad(pedidoId: number, medio: Pago['medio']) {
     const p = this.buscarPedido(pedidoId);
     const c = this.cotizacionAceptada(p)!;
@@ -337,7 +418,7 @@ export class DatosService {
     this.actualizar(pedidoId, (x) => ({
       ...x,
       pagos: [...x.pagos, { tipo: 'SALDO_75', medio, monto: saldo, confirmadoCliente: true, confirmadoTrabajador: false }],
-    }), `El cliente firmó la conformidad y declaró el pago del saldo de Bs ${saldo} (${medio === 'EFECTIVO' ? 'efectivo' : 'QR'})`);
+    }), `El cliente firmÃ³ la conformidad y declarÃ³ el pago del saldo de Bs ${saldo} (${medio === 'EFECTIVO' ? 'efectivo' : 'QR'})`);
     return null;
   }
 
@@ -347,7 +428,7 @@ export class DatosService {
     }
     const p = this.buscarPedido(pedidoId);
     const fecha = new Date().toISOString().slice(0, 10);
-    this.actualizar(pedidoId, (x) => ({ ...x, calificacion: { puntaje, comentario, fecha } }), `El cliente calificó con ${puntaje} estrellas`);
+    this.actualizar(pedidoId, (x) => ({ ...x, calificacion: { puntaje, comentario, fecha } }), `El cliente calificÃ³ con ${puntaje} estrellas`);
     this.trabajadores.update((lista) =>
       lista.map((t) => {
         if (t.id !== p.trabajadorId) return t;
@@ -365,7 +446,7 @@ export class DatosService {
     this.actualizar(pedidoId, (x) => ({
       ...x,
       reclamo: { pedidoId, motivo, descripcion, fecha: ahora(), estado: 'EN_REVISION' },
-    }), 'El cliente registró un reclamo');
+    }), 'El cliente registrÃ³ un reclamo');
     return null;
   }
 
@@ -378,7 +459,7 @@ export class DatosService {
   ): Promise<string | null> {
     if (datos.monto <= 0) return 'Indica el monto del trabajo.';
     if (!datos.fechaInicio) return 'Indica la fecha y hora en que puedes hacer el trabajo.';
-    if (datos.duracionHoras <= 0) return 'Indica cuántas horas dura el trabajo.';
+    if (datos.duracionHoras <= 0) return 'Indica cuÃ¡ntas horas dura el trabajo.';
     const cruce = this.hayCruce(t.id, datos.fechaInicio, datos.duracionHoras);
     if (cruce) return `Ese horario se cruza con tu trabajo "${cruce.descripcion}". Elige otra hora.`;
     if (!this.esDemo) {
@@ -400,19 +481,19 @@ export class DatosService {
     const cotizacion: Cotizacion = { ...datos, id: Date.now(), trabajadorId: t.id, trabajador: t.nombre, estado: 'PENDIENTE' };
     const visita = datos.requiereVisita ? ` + visita Bs ${datos.costoVisita}` : '';
     this.actualizar(pedidoId, (x) => ({ ...x, cotizaciones: [...x.cotizaciones, cotizacion] }),
-      `${t.nombre} envió una cotización de Bs ${datos.monto}${visita}`);
+      `${t.nombre} enviÃ³ una cotizaciÃ³n de Bs ${datos.monto}${visita}`);
     return null;
   }
 
   async iniciarServicio(pedidoId: number) {
     if (!this.esDemo) return this.accion(() => this.patch(`/panel/pedidos/${pedidoId}/iniciar`));
-    this.actualizar(pedidoId, (x) => ({ ...x, estado: 'EN_PROCESO' }), 'El trabajador inició el servicio');
+    this.actualizar(pedidoId, (x) => ({ ...x, estado: 'EN_PROCESO' }), 'El trabajador iniciÃ³ el servicio');
     return null;
   }
 
   async marcarTerminado(pedidoId: number) {
     if (!this.esDemo) return this.accion(() => this.patch(`/panel/pedidos/${pedidoId}/terminar`));
-    this.actualizar(pedidoId, (x) => ({ ...x, trabajoTerminado: true }), 'El trabajador marcó el trabajo como terminado');
+    this.actualizar(pedidoId, (x) => ({ ...x, trabajoTerminado: true }), 'El trabajador marcÃ³ el trabajo como terminado');
     return null;
   }
 
@@ -426,7 +507,7 @@ export class DatosService {
       ...x,
       estado: 'FINALIZADO',
       pagos: x.pagos.map((pg) => (pg.tipo === 'SALDO_75' ? { ...pg, confirmadoTrabajador: true } : pg)),
-    }), 'El trabajador confirmó que recibió el saldo. Servicio finalizado');
+    }), 'El trabajador confirmÃ³ que recibiÃ³ el saldo. Servicio finalizado');
     this.trabajadores.update((lista) =>
       lista.map((t) => (t.id === p.trabajadorId ? { ...t, trabajosRealizados: t.trabajosRealizados + 1 } : t)),
     );
@@ -442,11 +523,11 @@ export class DatosService {
     return null;
   }
 
-  // Solo en la demo: en la versión conectada el backend ya creó al trabajador en revisión
+  // Solo en la demo: en la versiÃ³n conectada el backend ya creÃ³ al trabajador en revisiÃ³n
   agregarTrabajadorEnRevision(d: { nombre: string; correo: string; ci: string; especialidades: string[]; zonas: string[] }) {
     if (!this.esDemo) return;
     const nuevo: Trabajador = {
-      ...d, id: Date.now(), correo: d.correo.toLowerCase(), experiencia: 'Recién registrado.', estado: 'REVISION',
+      ...d, id: Date.now(), correo: d.correo.toLowerCase(), experiencia: 'ReciÃ©n registrado.', estado: 'REVISION',
       documentos: ['CI.pdf', 'Antecedentes.pdf'], promedio: 0, trabajosRealizados: 0, opiniones: [],
     };
     this.trabajadores.update((lista) => [...lista, nuevo]);
@@ -454,7 +535,7 @@ export class DatosService {
 
   async rechazarTrabajador(id: number, motivo: string) {
     if (!this.esDemo) {
-      // El backend deja la cuenta "en revisión" (observada) hasta que corrija sus documentos
+      // El backend deja la cuenta "en revisiÃ³n" (observada) hasta que corrija sus documentos
       this.motivosRechazo.set(id, motivo);
       return this.accion(() => this.patch(`/trabajadores/${id}/verificar`, { aprobar: false, motivo }));
     }
@@ -496,7 +577,7 @@ export class DatosService {
     this.actualizar(pedidoId, (x) => ({
       ...x,
       reclamo: { ...x.reclamo!, estado: procede ? 'PROCEDENTE' : 'IMPROCEDENTE', resolucion },
-    }), `El administrador resolvió el reclamo: ${procede ? 'procedente' : 'improcedente'}`);
+    }), `El administrador resolviÃ³ el reclamo: ${procede ? 'procedente' : 'improcedente'}`);
     if (procede && p.trabajadorId) {
       const estado = p.reclamo?.motivo === 'ROBO' ? 'BLOQUEADO_PERMANENTE' : 'SUSPENDIDO';
       this.trabajadores.update((lista) => lista.map((t) => (t.id === p.trabajadorId ? { ...t, estado } : t)));
@@ -504,7 +585,7 @@ export class DatosService {
     return null;
   }
 
-  // ---------- Ayudantes (versión demo) ----------
+  // ---------- Ayudantes (versiÃ³n demo) ----------
 
   private buscarPedido(id: number): Pedido {
     return this.pedidos().find((p) => p.id === id)!;
@@ -518,7 +599,7 @@ export class DatosService {
   }
 }
 
-// ---------- Formato de las respuestas del backend y su conversión ----------
+// ---------- Formato de las respuestas del backend y su conversiÃ³n ----------
 
 interface CatalogoApi {
   idCategoria?: number;
@@ -580,7 +661,7 @@ interface PedidoApi {
   calificacion: { puntaje: number; comentario: string; fecha: string } | null;
 }
 
-// ISO del backend → "AAAA-MM-DDTHH:mm" en hora local (formato de <input type="datetime-local">)
+// ISO del backend â†’ "AAAA-MM-DDTHH:mm" en hora local (formato de <input type="datetime-local">)
 function aLocal(iso: string | null | undefined): string {
   if (!iso) return '';
   const d = new Date(iso);
@@ -607,7 +688,7 @@ function aTrabajador(t: TrabajadorApi, motivoRechazo?: string): Trabajador {
 }
 
 function aPedido(s: PedidoApi): Pedido {
-  // BAJO_REVISION (ya recibió cotizaciones) se muestra igual que PENDIENTE
+  // BAJO_REVISION (ya recibiÃ³ cotizaciones) se muestra igual que PENDIENTE
   const estado = (s.estado === 'BAJO_REVISION' ? 'PENDIENTE' : s.estado) as EstadoPedido;
   return {
     id: s.idSolicitud,
@@ -659,3 +740,5 @@ function aPedido(s: PedidoApi): Pedido {
     historial: s.historial.map((h) => ({ fecha: new Date(h.fechaHora).toLocaleString('es-BO'), descripcion: h.descripcion })),
   };
 }
+
+

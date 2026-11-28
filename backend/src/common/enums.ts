@@ -1,4 +1,4 @@
-export enum RolUsuario {
+﻿export enum RolUsuario {
   CLIENTE = 'CLIENTE',
   TRABAJADOR = 'TRABAJADOR',
   ADMIN = 'ADMIN',
@@ -30,6 +30,7 @@ export enum EstadoCotizacion {
 export enum TipoPago {
   ANTICIPO_25 = 'ANTICIPO_25',
   SALDO_75 = 'SALDO_75',
+  PARCIAL = 'PARCIAL',
 }
 
 export enum MedioPago {
@@ -50,3 +51,4 @@ export enum EstadoResolucion {
   PROCEDENTE = 'PROCEDENTE',
   IMPROCEDENTE = 'IMPROCEDENTE',
 }
+

@@ -19,10 +19,12 @@ export class RegistrarPagoDto {
   @Min(1)
   idSolicitud: number;
 
-  @ApiProperty({ enum: TipoPago, example: TipoPago.ANTICIPO_25 })
-  @IsNotEmpty({ message: 'El tipo de pago es obligatorio' })
-  @IsEnum(TipoPago)
-  tipo: TipoPago;
+  @ApiPropertyOptional({
+  example: 'PARCIAL',
+  description: 'Tipo de pago parcial',
+})
+@IsOptional()
+tipo?: string;
 
   @ApiProperty({ enum: MedioPago, example: MedioPago.QR_TRABAJADOR })
   @IsNotEmpty({ message: 'El medio de pago es obligatorio' })
