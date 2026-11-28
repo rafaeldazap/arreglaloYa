@@ -10,3 +10,4 @@ export * from './TransaccionPago';
 export * from './ReclamoSancion';
 export * from './Calificacion';
 export * from './HistorialEstado';
+export * from './CancelacionSolicitud';
