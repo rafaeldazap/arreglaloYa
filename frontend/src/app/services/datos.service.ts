@@ -16,6 +16,7 @@ import {
 } from '../models';
 import { AuthService } from './auth.service';
 import { categoriasDemo, pedidosDemo, trabajadoresDemo, zonasDemo } from './datos-demo';
+import { nombresMotivoCancelacion } from '../formato';
 
 // Todas las pantallas leen y cambian los datos SOLO a través de este servicio.
 // - Versión conectada (npm start): cada acción llama a la API REST del backend NestJS
@@ -341,7 +342,7 @@ export class DatosService {
     const resumen = previa.montoPenalizacion > 0
       ? ` Faltaban menos de 24 horas: el anticipo de Bs ${previa.montoPenalizacion} se libera al trabajador (RN-12).`
       : previa.montoReembolso > 0 ? ` Se devuelve el anticipo de Bs ${previa.montoReembolso} al cliente (RN-12).` : '';
-    this.actualizar(id, (x) => ({ ...x, estado: 'CANCELADO' }), `El cliente canceló la solicitud (${motivo}).${resumen}`);
+    this.actualizar(id, (x) => ({ ...x, estado: 'CANCELADO' }), `El cliente canceló la solicitud (${nombresMotivoCancelacion[motivo]}).${resumen}`);
     return null;
   }
 

@@ -25,3 +25,9 @@ summary { cursor: pointer; color: var(--azul); font-weight: 600; }
 .historial { padding-left: 18px; }
 .historial li { margin: 6px 0; }
 .historial small { color: var(--gris); margin-right: 6px; }
+.resumen-cancelacion { display: grid; grid-template-columns: auto 1fr; gap: 4px 16px; margin: 0 0 10px; }
+.resumen-cancelacion dt { color: var(--gris); }
+.resumen-cancelacion dd { margin: 0; font-weight: 600; }
+.consecuencias { margin: 0 0 8px; padding-left: 18px; }
+.consecuencias li { margin: 4px 0; }
+.ayuda.falta { color: var(--rojo); }

@@ -1,10 +1,10 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { EstadoPedido, MotivoReclamo, Pago, Pedido } from '../../models';
+import { EstadoPedido, MotivoCancelacion, MotivoReclamo, Pago, Pedido, PrevisualizacionCancelacion } from '../../models';
 import { AuthService } from '../../services/auth.service';
 import { DatosService } from '../../services/datos.service';
-import { estrellas, fechaHora, nombresEstado, nombresMotivo } from '../../formato';
+import { estrellas, fechaHora, nombresEstado, nombresMotivo, nombresMotivoCancelacion } from '../../formato';
 
 // Qué panel está abierto en cada pedido (solo uno a la vez)
 type Panel = { pedido: number; tipo: 'pagar' | 'cancelar' | 'reclamo'; cotizacion?: number } | null;
@@ -35,9 +35,25 @@ export class MisPedidos {
   motivo: MotivoReclamo = 'MAL_ARREGLO';
   descripcionReclamo = '';
 
+  // Cancelación en 2 pasos: (a) motivo y detalle, (b) consecuencias y confirmación
+  motivosCancelacion = nombresMotivoCancelacion;
+  listaMotivosCancelacion = Object.keys(nombresMotivoCancelacion) as MotivoCancelacion[];
+  readonly maxDetalle = 255;
+  motivoCancelacion: MotivoCancelacion = 'CAMBIO_DE_PLANES';
+  detalleCancelacion = '';
+  previsualizacion = signal<PrevisualizacionCancelacion | null>(null);
+  cargandoCancelacion = signal(false);
+
   abrir(p: Panel) {
     this.error.set('');
+    this.previsualizacion.set(null);
     this.panel.set(p);
+  }
+
+  abrirCancelacion(p: Pedido) {
+    this.motivoCancelacion = 'CAMBIO_DE_PLANES';
+    this.detalleCancelacion = '';
+    this.abrir({ pedido: p.id, tipo: 'cancelar' });
   }
 
   pasoCompletado(pedido: Pedido, paso: EstadoPedido): boolean {
@@ -66,9 +82,37 @@ export class MisPedidos {
     else this.panel.set(null);
   }
 
+  // Paso (a) -> (b): valida el detalle y pide al backend las consecuencias
+  async verConsecuencias(p: Pedido) {
+    this.error.set('');
+    if (this.motivoCancelacion === 'OTRO' && this.detalleCancelacion.trim().length < 10) {
+      this.error.set('Si eliges "Otro", explica el motivo con al menos 10 caracteres.');
+      return;
+    }
+    this.cargandoCancelacion.set(true);
+    const r = await this.datos.previsualizarCancelacion(p.id);
+    this.cargandoCancelacion.set(false);
+    if (r.error) this.error.set(r.error);
+    else this.previsualizacion.set(r.datos);
+  }
+
+  // Paso (b) -> (a): vuelve a elegir el motivo sin perder lo escrito
+  volverAlMotivo() {
+    this.error.set('');
+    this.previsualizacion.set(null);
+  }
+
   async cancelar(p: Pedido) {
-    this.panel.set(null);
-    await this.datos.cancelarPedido(p.id, 'CAMBIO_DE_PLANES', '');
+    if (!this.previsualizacion()?.puedeCancelar) return;
+    this.error.set('');
+    this.cargandoCancelacion.set(true);
+    const error = await this.datos.cancelarPedido(p.id, this.motivoCancelacion, this.detalleCancelacion);
+    this.cargandoCancelacion.set(false);
+    if (error) {
+      this.error.set(error);
+      return;
+    }
+    this.abrir(null);
   }
 
   firmarConformidad(p: Pedido) {
