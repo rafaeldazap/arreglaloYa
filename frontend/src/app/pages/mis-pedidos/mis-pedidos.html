@@ -143,17 +143,67 @@
         </ul>
       </details>
 
-      <div class="acciones">
-        @if (puedeCancelar(p)) {
-          @if (panel()?.tipo === 'cancelar' && panel()?.pedido === p.id) {
-            <span>¿Seguro que quieres cancelar?
-              @if (p.estado === 'APROBADO') { Con menos de 24 horas de anticipación, el anticipo se le entrega al trabajador. }
-            </span>
-            <button class="btn btn-peligro" (click)="cancelar(p)">Sí, cancelar</button>
-            <button class="btn btn-gris" (click)="abrir(null)">No</button>
+      <!-- Cancelación en 2 pasos: (a) motivo, (b) consecuencias y confirmación -->
+      @if (panel()?.tipo === 'cancelar' && panel()?.pedido === p.id) {
+        <div class="pago cancelacion">
+          @if (previsualizacion(); as v) {
+            <p><b>Esto pasará si cancelas</b></p>
+            <dl class="resumen-cancelacion">
+              <dt>Estado actual</dt>
+              <dd>{{ nombres[v.estadoActual] }}</dd>
+              <dt>Horas de anticipación</dt>
+              <dd>{{ v.horasAnticipacion === null ? 'Sin fecha agendada' : v.horasAnticipacion + ' h' }}</dd>
+              <dt>Anticipo pagado</dt>
+              <dd>Bs {{ v.montoAnticipo }}</dd>
+              <dt>Penalización</dt>
+              <dd>{{ v.porcentajePenalizacion }}% (Bs {{ v.montoPenalizacion }})</dd>
+              <dt>Reembolso</dt>
+              <dd>Bs {{ v.montoReembolso }}</dd>
+            </dl>
+            @if (v.puedeCancelar) {
+              <ul class="consecuencias">
+                @for (c of v.consecuencias; track $index) {
+                  <li>{{ c }}</li>
+                }
+              </ul>
+            } @else {
+              <p class="error">{{ v.razonBloqueo }}</p>
+            }
+            @if (error()) { <p class="error">{{ error() }}</p> }
+            <div class="acciones">
+              <button class="btn btn-peligro" (click)="cancelar(p)" [disabled]="!v.puedeCancelar || cargandoCancelacion()">
+                {{ cargandoCancelacion() ? 'Cancelando...' : 'Confirmar cancelación' }}
+              </button>
+              <button class="btn btn-gris" (click)="volverAlMotivo()" [disabled]="cargandoCancelacion()">Volver</button>
+            </div>
           } @else {
-            <button class="btn btn-peligro" (click)="abrir({ pedido: p.id, tipo: 'cancelar' })">Cancelar solicitud</button>
+            <label for="motivo-cancelacion-{{ p.id }}">¿Por qué quieres cancelar?</label>
+            <select id="motivo-cancelacion-{{ p.id }}" [(ngModel)]="motivoCancelacion">
+              @for (m of listaMotivosCancelacion; track m) {
+                <option [value]="m">{{ motivosCancelacion[m] }}</option>
+              }
+            </select>
+            <label for="detalle-cancelacion-{{ p.id }}">
+              Detalle {{ motivoCancelacion === 'OTRO' ? '(obligatorio, mínimo 10 caracteres)' : '(opcional)' }}
+            </label>
+            <textarea id="detalle-cancelacion-{{ p.id }}" rows="3" maxlength="255" [(ngModel)]="detalleCancelacion"></textarea>
+            <p class="ayuda" [class.falta]="motivoCancelacion === 'OTRO' && detalleCancelacion.trim().length < 10">
+              {{ detalleCancelacion.length }}/{{ maxDetalle }} caracteres
+            </p>
+            @if (error()) { <p class="error">{{ error() }}</p> }
+            <div class="acciones">
+              <button class="btn" (click)="verConsecuencias(p)" [disabled]="cargandoCancelacion()">
+                {{ cargandoCancelacion() ? 'Calculando...' : 'Ver consecuencias' }}
+              </button>
+              <button class="btn btn-gris" (click)="abrir(null)" [disabled]="cargandoCancelacion()">Volver</button>
+            </div>
           }
+        </div>
+      }
+
+      <div class="acciones">
+        @if (puedeCancelar(p) && !(panel()?.tipo === 'cancelar' && panel()?.pedido === p.id)) {
+          <button class="btn btn-peligro" (click)="abrirCancelacion(p)">Cancelar solicitud</button>
         }
         @if (puedeReclamar(p) && panel()?.pedido !== p.id) {
           <button class="btn btn-gris" (click)="abrir({ pedido: p.id, tipo: 'reclamo' })">Reportar un problema</button>

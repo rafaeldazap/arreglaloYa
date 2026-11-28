@@ -10,6 +10,7 @@ import { Categoria } from '../../entities/Categoria';
 import { Zona } from '../../entities/Zona';
 import { PerfilTrabajador } from '../../entities/PerfilTrabajador';
 import { TransaccionPago } from '../../entities/TransaccionPago';
+import { CancelacionSolicitud } from '../../entities/CancelacionSolicitud';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { TransaccionPago } from '../../entities/TransaccionPago';
       Zona,
       PerfilTrabajador,
       TransaccionPago,
+      CancelacionSolicitud,
     ]),
   ],
   controllers: [SolicitudesController],

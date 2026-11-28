@@ -9,9 +9,10 @@ import {
   UseGuards,
   ParseIntPipe,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
 import { SolicitudesService } from './solicitudes.service';
 import { CrearSolicitudDto } from './dto/crear-solicitud.dto';
+import { CancelarSolicitudDto } from './dto/cancelar-solicitud.dto';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -59,15 +60,48 @@ export class SolicitudesController {
     return this.solicitudesService.consultarHistorial(id, usuario);
   }
 
+  @Get(':id/cancelacion/previsualizar')
+  @ApiOperation({
+    summary: 'Previsualizar las consecuencias de cancelar la solicitud sin modificarla (CU-10, RN-12)',
+    description:
+      'Devuelve si se puede cancelar, la razón si no se puede, las horas de anticipación, el anticipo, la penalización, el reembolso y la lista de consecuencias. Solo el cliente dueño o un ADMIN.',
+  })
+  @ApiResponse({ status: 200, description: 'Consecuencias calculadas (no se modifica nada)' })
+  @ApiResponse({ status: 403, description: 'El usuario no es el cliente dueño ni ADMIN' })
+  @ApiResponse({ status: 404, description: 'Solicitud no encontrada' })
+  previsualizarCancelacion(@Param('id', ParseIntPipe) id: number, @CurrentUser() usuario: Usuario) {
+    return this.solicitudesService.previsualizarCancelacion(id, usuario);
+  }
+
+  @Get(':id/cancelacion')
+  @ApiOperation({
+    summary: 'Obtener el registro de cancelación de la solicitud (CU-10)',
+    description: 'Visible para el cliente dueño, el trabajador asignado o un ADMIN.',
+  })
+  @ApiResponse({ status: 200, description: 'Registro de cancelación con motivo, montos y fecha' })
+  @ApiResponse({ status: 403, description: 'El usuario no participa en la solicitud' })
+  @ApiResponse({ status: 404, description: 'Solicitud no encontrada o sin cancelación registrada' })
+  obtenerCancelacion(@Param('id', ParseIntPipe) id: number, @CurrentUser() usuario: Usuario) {
+    return this.solicitudesService.obtenerCancelacion(id, usuario);
+  }
+
   @Patch(':id/cancelar')
-  @ApiOperation({ summary: 'Cancelar solicitud por el cliente aplicando regla del 25% (CU-10, RN-12)' })
-  @ApiQuery({ name: 'motivo', required: false, type: String })
+  @ApiOperation({
+    summary: 'Cancelar solicitud por el cliente aplicando regla del 25% (CU-10, RN-12)',
+    description:
+      'Recibe el motivo (y el detalle, obligatorio con mínimo 10 caracteres si el motivo es OTRO). Solo se puede cancelar en PENDIENTE, BAJO_REVISION o APROBADO. Con anticipo pagado y menos de 24 h para el servicio, el anticipo se libera al trabajador.',
+  })
+  @ApiResponse({ status: 200, description: 'Solicitud cancelada y registro de cancelación guardado' })
+  @ApiResponse({ status: 400, description: 'Motivo o detalle inválido, o la solicitud no se puede cancelar en su estado actual' })
+  @ApiResponse({ status: 403, description: 'El usuario no es el cliente dueño ni ADMIN' })
+  @ApiResponse({ status: 404, description: 'Solicitud no encontrada' })
+  @ApiResponse({ status: 409, description: 'La solicitud ya tiene una cancelación registrada' })
   cancelar(
     @Param('id', ParseIntPipe) id: number,
-    @Query('motivo') motivo: string,
+    @Body() dto: CancelarSolicitudDto,
     @CurrentUser() usuario: Usuario,
   ) {
-    return this.solicitudesService.cancelar(id, motivo, usuario);
+    return this.solicitudesService.cancelar(id, dto, usuario);
   }
 
   @Post('expirar-vencidas')

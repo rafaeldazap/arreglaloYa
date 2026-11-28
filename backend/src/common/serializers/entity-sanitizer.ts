@@ -6,6 +6,7 @@ import { TransaccionPago } from '../../entities/TransaccionPago';
 import { ReclamoSancion } from '../../entities/ReclamoSancion';
 import { Calificacion } from '../../entities/Calificacion';
 import { HistorialEstado } from '../../entities/HistorialEstado';
+import { CancelacionSolicitud } from '../../entities/CancelacionSolicitud';
 import { EstadoSolicitud, RolUsuario } from '../enums';
 
 export function sanitizeUsuario(u?: Usuario | null, includeContact = false) {
@@ -170,5 +171,22 @@ export function sanitizeHistorial(h: HistorialEstado) {
     descripcion: h.descripcion,
     fechaHora: h.fechaHora,
     usuario: sanitizeUsuario(h.usuario),
+  };
+}
+
+export function sanitizeCancelacion(c: CancelacionSolicitud) {
+  return {
+    idCancelacion: c.idCancelacion,
+    idSolicitud: c.solicitud?.idSolicitud,
+    motivo: c.motivo,
+    detalle: c.detalle,
+    estadoAlCancelar: c.estadoAlCancelar,
+    horasAnticipacion: c.horasAnticipacion === null ? null : Number(c.horasAnticipacion),
+    montoAnticipo: Number(c.montoAnticipo),
+    porcentajePenalizacion: Number(c.porcentajePenalizacion),
+    montoPenalizacion: Number(c.montoPenalizacion),
+    montoReembolso: Number(c.montoReembolso),
+    fechaCancelacion: c.fechaCancelacion,
+    usuario: sanitizeUsuario(c.usuario),
   };
 }

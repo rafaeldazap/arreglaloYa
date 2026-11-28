@@ -146,6 +146,23 @@ CREATE TABLE historial_estado (
     fecha_hora TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+CREATE TABLE cancelacion_solicitud (
+    id_cancelacion SERIAL PRIMARY KEY,
+    id_solicitud INTEGER NOT NULL UNIQUE REFERENCES solicitud_servicio(id_solicitud) ON DELETE CASCADE,
+    id_usuario INTEGER NOT NULL REFERENCES usuario(id_usuario),
+    motivo VARCHAR(30) NOT NULL
+        CHECK (motivo IN ('CAMBIO_DE_PLANES', 'ENCONTRE_OTRO_TRABAJADOR', 'PRECIO_ELEVADO', 'PROBLEMA_RESUELTO', 'DEMORA_DEL_TRABAJADOR', 'OTRO')),
+    detalle TEXT,
+    estado_al_cancelar VARCHAR(25) NOT NULL
+        CHECK (estado_al_cancelar IN ('PENDIENTE', 'BAJO_REVISION', 'APROBADO')),
+    horas_anticipacion NUMERIC(10,2),
+    monto_anticipo NUMERIC(10,2) NOT NULL DEFAULT 0 CHECK (monto_anticipo >= 0),
+    porcentaje_penalizacion NUMERIC(5,2) NOT NULL DEFAULT 0 CHECK (porcentaje_penalizacion BETWEEN 0 AND 100),
+    monto_penalizacion NUMERIC(10,2) NOT NULL DEFAULT 0 CHECK (monto_penalizacion >= 0),
+    monto_reembolso NUMERIC(10,2) NOT NULL DEFAULT 0 CHECK (monto_reembolso >= 0),
+    fecha_cancelacion TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 -- Datos iniciales
 INSERT INTO categoria (nombre) VALUES ('Plomería'), ('Electricidad'), ('Albañilería'), ('Electrodomésticos');
 INSERT INTO zona (nombre) VALUES ('Centro'), ('Cala Cala'), ('Queru Queru'), ('Sarco'), ('Hipódromo'), ('Sacaba'), ('Quillacollo'), ('Tiquipaya');

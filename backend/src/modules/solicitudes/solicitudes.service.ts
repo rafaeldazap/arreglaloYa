@@ -2,10 +2,11 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  ConflictException,
   ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, LessThanOrEqual, Repository } from 'typeorm';
+import { DataSource, EntityManager, LessThanOrEqual, Repository } from 'typeorm';
 import { SolicitudServicio } from '../../entities/SolicitudServicio';
 import { FotoSolicitud } from '../../entities/FotoSolicitud';
 import { HistorialEstado } from '../../entities/HistorialEstado';
@@ -14,9 +15,61 @@ import { Zona } from '../../entities/Zona';
 import { PerfilTrabajador } from '../../entities/PerfilTrabajador';
 import { Usuario } from '../../entities/Usuario';
 import { TransaccionPago } from '../../entities/TransaccionPago';
+import { CancelacionSolicitud } from '../../entities/CancelacionSolicitud';
 import { CrearSolicitudDto } from './dto/crear-solicitud.dto';
-import { EstadoCuenta, EstadoSolicitud, RolUsuario, TipoPago } from '../../common/enums';
-import { sanitizeHistorial, sanitizeSolicitud } from '../../common/serializers/entity-sanitizer';
+import { CancelarSolicitudDto } from './dto/cancelar-solicitud.dto';
+import {
+  EstadoCuenta,
+  EstadoSolicitud,
+  MotivoCancelacion,
+  RolUsuario,
+  TipoPago,
+} from '../../common/enums';
+import {
+  sanitizeCancelacion,
+  sanitizeHistorial,
+  sanitizeSolicitud,
+} from '../../common/serializers/entity-sanitizer';
+
+// Resultado de evaluar si una solicitud se puede cancelar y qué pasaría con el anticipo (RN-12)
+export interface ConsecuenciasCancelacion {
+  puedeCancelar: boolean;
+  razonBloqueo: string | null;
+  estadoActual: EstadoSolicitud;
+  horasAnticipacion: number | null;
+  montoAnticipo: number;
+  porcentajePenalizacion: number;
+  montoPenalizacion: number;
+  montoReembolso: number;
+  consecuencias: string[];
+}
+
+// RN-12: con 24 horas o más de anticipación no hay penalización
+const HORAS_MINIMAS_SIN_PENALIZACION = 24;
+
+// Estados en los que ya no se permite cancelar y la explicación que se muestra
+const RAZONES_BLOQUEO: Partial<Record<EstadoSolicitud, string>> = {
+  [EstadoSolicitud.EN_PROCESO]:
+    'El trabajador ya inició el servicio, por eso no se puede cancelar. Si hay un problema, usa "Reportar un problema".',
+  [EstadoSolicitud.FINALIZADO]: 'El servicio ya finalizó, por eso no se puede cancelar.',
+  [EstadoSolicitud.CANCELADO]: 'La solicitud ya fue cancelada.',
+  [EstadoSolicitud.FUERA_DE_TIEMPO]:
+    'La solicitud caducó automáticamente al cumplir 30 días sin concretarse (RN-08), por eso no se puede cancelar.',
+};
+
+// Texto en español de cada motivo, para el historial del pedido
+const ETIQUETAS_MOTIVO_CANCELACION: Record<MotivoCancelacion, string> = {
+  [MotivoCancelacion.CAMBIO_DE_PLANES]: 'Cambio de planes',
+  [MotivoCancelacion.ENCONTRE_OTRO_TRABAJADOR]: 'Encontró otro trabajador',
+  [MotivoCancelacion.PRECIO_ELEVADO]: 'Precio elevado',
+  [MotivoCancelacion.PROBLEMA_RESUELTO]: 'El problema ya se resolvió',
+  [MotivoCancelacion.DEMORA_DEL_TRABAJADOR]: 'Demora del trabajador',
+  [MotivoCancelacion.OTRO]: 'Otro',
+};
+
+function redondear(valor: number): number {
+  return Math.round((valor + Number.EPSILON) * 100) / 100;
+}
 
 @Injectable()
 export class SolicitudesService {
@@ -214,8 +267,114 @@ export class SolicitudesService {
     return sanitizeSolicitud(s, usuario);
   }
 
+  private buscarAnticipo(idSolicitud: number, manager: EntityManager) {
+    return manager.findOne(TransaccionPago, {
+      where: { solicitud: { idSolicitud }, tipo: TipoPago.ANTICIPO_25 },
+    });
+  }
+
+  // RN-12: calcula qué pasaría si la solicitud se cancela en este momento (no modifica nada)
+  private async calcularConsecuencias(
+    solicitud: SolicitudServicio,
+    manager: EntityManager,
+  ): Promise<ConsecuenciasCancelacion> {
+    const anticipo = await this.buscarAnticipo(solicitud.idSolicitud, manager);
+    const montoAnticipo = anticipo ? redondear(Number(anticipo.monto)) : 0;
+    const inicio = solicitud.fechaInicioAgendada ? new Date(solicitud.fechaInicioAgendada) : null;
+    const horasAnticipacion = inicio ? redondear((inicio.getTime() - Date.now()) / 3_600_000) : null;
+
+    const razonBloqueo = RAZONES_BLOQUEO[solicitud.estado];
+    if (razonBloqueo) {
+      return {
+        puedeCancelar: false,
+        razonBloqueo,
+        estadoActual: solicitud.estado,
+        horasAnticipacion,
+        montoAnticipo,
+        porcentajePenalizacion: 0,
+        montoPenalizacion: 0,
+        montoReembolso: 0,
+        consecuencias: [],
+      };
+    }
+
+    // PENDIENTE, BAJO_REVISION o APROBADO
+    const consecuencias = ['La solicitud pasará a estado Cancelado. Esta acción no se puede deshacer.'];
+    let porcentajePenalizacion = 0;
+
+    if (solicitud.estado === EstadoSolicitud.APROBADO) {
+      consecuencias.push('El trabajador asignado ya no realizará el servicio.');
+      if (!anticipo) {
+        consecuencias.push('No se pagó anticipo, así que no hay penalización.');
+      } else if (horasAnticipacion === null) {
+        consecuencias.push(
+          `El servicio no tiene fecha agendada: no hay penalización y se reembolsa al cliente el anticipo completo (Bs ${montoAnticipo}).`,
+        );
+      } else if (horasAnticipacion >= HORAS_MINIMAS_SIN_PENALIZACION) {
+        consecuencias.push(
+          `Se cancela con ${horasAnticipacion} h de anticipación (24 h o más): no hay penalización y se reembolsa al cliente el anticipo completo (Bs ${montoAnticipo}).`,
+        );
+      } else {
+        porcentajePenalizacion = 100;
+        consecuencias.push(
+          horasAnticipacion < 0
+            ? 'La fecha agendada del servicio ya pasó.'
+            : `Faltan solo ${horasAnticipacion} h para el servicio (menos de 24 h).`,
+          `Se aplica una penalización del 100% del anticipo (Bs ${montoAnticipo}), que se entrega al trabajador. No hay reembolso.`,
+        );
+      }
+    } else {
+      consecuencias.push(
+        'Los trabajadores dejarán de ver este pedido y no podrán enviar más cotizaciones.',
+        'No hay penalización porque todavía no se aprobó ninguna cotización.',
+      );
+    }
+
+    const montoPenalizacion = redondear((montoAnticipo * porcentajePenalizacion) / 100);
+    return {
+      puedeCancelar: true,
+      razonBloqueo: null,
+      estadoActual: solicitud.estado,
+      horasAnticipacion,
+      montoAnticipo,
+      porcentajePenalizacion,
+      montoPenalizacion,
+      montoReembolso: redondear(montoAnticipo - montoPenalizacion),
+      consecuencias,
+    };
+  }
+
+  private validarClienteDuenoOAdmin(s: SolicitudServicio, usuario: Usuario) {
+    if (s.cliente?.idUsuario !== usuario.idUsuario && usuario.rol !== RolUsuario.ADMIN) {
+      throw new ForbiddenException(
+        'Solo el cliente que creó la solicitud (o un administrador) puede cancelarla',
+      );
+    }
+  }
+
+  // CU-10: Muestra lo que pasaría al cancelar, sin modificar nada
+  async previsualizarCancelacion(id: number, usuario: Usuario) {
+    const manager = this.dataSource.manager;
+    const s = await manager.findOne(SolicitudServicio, {
+      where: { idSolicitud: id },
+      relations: ['cliente'],
+    });
+    if (!s) throw new NotFoundException(`Solicitud no encontrada con ID: ${id}`);
+
+    this.validarClienteDuenoOAdmin(s, usuario);
+
+    return { idSolicitud: s.idSolicitud, ...(await this.calcularConsecuencias(s, manager)) };
+  }
+
   // CU-10: Cancelar solicitud por el cliente (RN-03, RN-12)
-  async cancelar(id: number, motivo: string, usuario: Usuario) {
+  async cancelar(id: number, dto: CancelarSolicitudDto, usuario: Usuario) {
+    const detalle = dto.detalle?.trim() || null;
+    if (dto.motivo === MotivoCancelacion.OTRO && (!detalle || detalle.length < 10)) {
+      throw new BadRequestException(
+        'Si el motivo es "Otro", explica en el detalle por qué cancelas (mínimo 10 caracteres).',
+      );
+    }
+
     const resultado = await this.dataSource.transaction(async (manager) => {
       await manager
         .createQueryBuilder(SolicitudServicio, 's')
@@ -231,74 +390,102 @@ export class SolicitudesService {
 
       if (!s) throw new NotFoundException(`Solicitud no encontrada con ID: ${id}`);
 
-      if (s.cliente.idUsuario !== usuario.idUsuario && usuario.rol !== RolUsuario.ADMIN) {
-        throw new ForbiddenException('Solo el cliente que creó la solicitud puede cancelarla');
+      this.validarClienteDuenoOAdmin(s, usuario);
+
+      const yaCancelada = await manager.findOne(CancelacionSolicitud, {
+        where: { solicitud: { idSolicitud: id } },
+      });
+      if (yaCancelada) {
+        throw new ConflictException(`La solicitud #${id} ya tiene una cancelación registrada.`);
       }
 
-      if (
-        s.estado !== EstadoSolicitud.PENDIENTE &&
-        s.estado !== EstadoSolicitud.BAJO_REVISION &&
-        s.estado !== EstadoSolicitud.APROBADO
-      ) {
-        throw new BadRequestException(
-          `No se puede cancelar una solicitud en estado ${s.estado}.`,
-        );
-      }
+      // Se recalcula dentro de la transacción: el estado o la hora pudieron cambiar desde la previsualización
+      const c = await this.calcularConsecuencias(s, manager);
+      if (!c.puedeCancelar) throw new BadRequestException(c.razonBloqueo);
 
       const estadoAnterior = s.estado;
       s.estado = EstadoSolicitud.CANCELADO;
       await manager.save(SolicitudServicio, s);
 
-      // RN-12: Si estaba en APROBADO con anticipo retenido
-      let detalleCompensacion = '';
-      if (estadoAnterior === EstadoSolicitud.APROBADO) {
-        const anticipo = await manager.findOne(TransaccionPago, {
-          where: { solicitud: { idSolicitud: s.idSolicitud }, tipo: TipoPago.ANTICIPO_25 },
-        });
-
-        if (anticipo) {
-          const ahora = new Date();
-          const inicioAgendado = s.fechaInicioAgendada ? new Date(s.fechaInicioAgendada) : null;
-
-          if (inicioAgendado) {
-            const diffMs = inicioAgendado.getTime() - ahora.getTime();
-            const horasAnticipacion = diffMs / (1000 * 60 * 60);
-
-            if (horasAnticipacion >= 24) {
-              anticipo.liberadoAlTrabajador = false;
-              detalleCompensacion =
-                ' (Cancelado con >= 24h de anticipación: anticipo 25% reembolsable al cliente)';
-            } else {
-              anticipo.liberadoAlTrabajador = true;
-              detalleCompensacion =
-                ' (Cancelado con < 24h de anticipación: anticipo 25% liberado al trabajador)';
-            }
-          } else {
-            // Sin horario fijo agendado, se mantiene retenido para reembolso al cliente
-            anticipo.liberadoAlTrabajador = false;
-            detalleCompensacion = ' (Anticipo 25% marcado para reembolso al cliente)';
-          }
-          await manager.save(TransaccionPago, anticipo);
-        }
+      // RN-12: con penalización el anticipo se libera al trabajador; sin ella queda para reembolso al cliente
+      const anticipo = await this.buscarAnticipo(s.idSolicitud, manager);
+      if (anticipo) {
+        anticipo.liberadoAlTrabajador = c.porcentajePenalizacion > 0;
+        await manager.save(TransaccionPago, anticipo);
       }
 
-      const motivoLimpio = (motivo || 'Cancelación solicitada por el cliente').slice(0, 150);
+      const cancelacion = await manager.save(
+        CancelacionSolicitud,
+        manager.create(CancelacionSolicitud, {
+          solicitud: s,
+          usuario,
+          motivo: dto.motivo,
+          detalle,
+          estadoAlCancelar: estadoAnterior,
+          horasAnticipacion: c.horasAnticipacion,
+          montoAnticipo: c.montoAnticipo,
+          porcentajePenalizacion: c.porcentajePenalizacion,
+          montoPenalizacion: c.montoPenalizacion,
+          montoReembolso: c.montoReembolso,
+        }),
+      );
+
+      let resumen = 'Sin penalización.';
+      if (anticipo) {
+        resumen =
+          c.montoPenalizacion > 0
+            ? `Penalización del ${c.porcentajePenalizacion}% (Bs ${c.montoPenalizacion}) liberada al trabajador.`
+            : `Anticipo de Bs ${c.montoReembolso} reembolsable al cliente.`;
+      }
+
+      const textoDetalle = detalle ? ` Detalle: ${detalle}` : '';
       const historial = manager.create(HistorialEstado, {
         solicitud: s,
         usuario,
         estadoAnterior,
         estadoNuevo: EstadoSolicitud.CANCELADO,
-        descripcion: `${motivoLimpio}${detalleCompensacion}`.slice(0, 255),
+        descripcion:
+          `Solicitud cancelada. Motivo: ${ETIQUETAS_MOTIVO_CANCELACION[dto.motivo]}. ${resumen}${textoDetalle}`.slice(
+            0,
+            255,
+          ),
       });
       await manager.save(HistorialEstado, historial);
 
-      return { s, detalleCompensacion };
+      return { s, cancelacion, resumen };
     });
 
     return {
-      mensaje: `Solicitud #${id} cancelada exitosamente${resultado.detalleCompensacion}`,
+      mensaje: `Solicitud #${id} cancelada exitosamente. ${resultado.resumen}`,
       solicitud: sanitizeSolicitud(resultado.s, usuario),
+      cancelacion: sanitizeCancelacion(resultado.cancelacion),
     };
+  }
+
+  // CU-10: Consultar el registro de cancelación guardado (cliente, trabajador asignado o ADMIN)
+  async obtenerCancelacion(idSolicitud: number, usuario: Usuario) {
+    const s = await this.solicitudRepo.findOne({
+      where: { idSolicitud },
+      relations: ['cliente', 'trabajador', 'trabajador.usuario'],
+    });
+    if (!s) throw new NotFoundException(`Solicitud #${idSolicitud} no encontrada`);
+
+    const esCliente = s.cliente?.idUsuario === usuario.idUsuario;
+    const esTrabajador = s.trabajador?.usuario?.idUsuario === usuario.idUsuario;
+    const esAdmin = usuario.rol === RolUsuario.ADMIN;
+    if (!esCliente && !esTrabajador && !esAdmin) {
+      throw new ForbiddenException('No tiene permisos para ver la cancelación de este pedido');
+    }
+
+    const cancelacion = await this.dataSource.manager.findOne(CancelacionSolicitud, {
+      where: { solicitud: { idSolicitud } },
+      relations: ['solicitud', 'usuario'],
+    });
+    if (!cancelacion) {
+      throw new NotFoundException(`La solicitud #${idSolicitud} no tiene una cancelación registrada`);
+    }
+
+    return sanitizeCancelacion(cancelacion);
   }
 
   // CU-11, RN-08: Expirar solicitudes con más de 30 días sin concretarse
