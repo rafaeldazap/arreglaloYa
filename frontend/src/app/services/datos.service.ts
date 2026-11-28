@@ -2,7 +2,7 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { computed, effect, inject, Injectable, signal, untracked } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
-import { Catalogo, Cotizacion, EstadoPedido, MotivoReclamo, Pago, Pedido, Trabajador, Usuario } from '../models';
+import { Catalogo, Cotizacion, EstadoPedido, MotivoReclamo, Pago, Pedido, Suspension, Trabajador, Usuario } from '../models';
 import { AuthService } from './auth.service';
 import { categoriasDemo, pedidosDemo, trabajadoresDemo, zonasDemo } from './datos-demo';
 
@@ -462,6 +462,92 @@ export class DatosService {
       lista.map((t) => (t.id === id ? { ...t, estado: 'SUSPENDIDO', motivoRechazo: motivo } : t)),
     );
     return null;
+  }
+
+  // RF-17: Suspender temporalmente a un trabajador
+  async suspenderTrabajador(id: number, motivo: string, dias: number, fechaFin?: string) {
+    if (!this.esDemo) {
+      return this.accion(() =>
+        this.post(`/trabajadores/${id}/suspender`, {
+          motivo,
+          dias,
+          ...(fechaFin ? { fechaFin } : {}),
+        }),
+      );
+    }
+    const fin = fechaFin ? new Date(fechaFin) : new Date(Date.now() + dias * 24 * 60 * 60 * 1000);
+    this.trabajadores.update((lista) =>
+      lista.map((t) =>
+        t.id === id
+          ? { ...t, estado: 'SUSPENDIDO', suspendidoHasta: fin.toISOString(), motivoRechazo: motivo }
+          : t,
+      ),
+    );
+    return null;
+  }
+
+  // RF-17: Levantar suspensión anticipadamente
+  async levantarSuspensionTrabajador(id: number, motivo?: string) {
+    if (!this.esDemo) {
+      return this.accion(() =>
+        this.patch(`/trabajadores/${id}/levantar-suspension`, { motivo }),
+      );
+    }
+    this.trabajadores.update((lista) =>
+      lista.map((t) =>
+        t.id === id ? { ...t, estado: 'ACTIVO', suspendidoHasta: undefined, motivoRechazo: undefined } : t,
+      ),
+    );
+    return null;
+  }
+
+  // RF-17: Consultar historial de suspensiones
+  async consultarSuspensionesTrabajador(id: number): Promise<{
+    idPerfil: number;
+    nombreTrabajador: string;
+    estadoCuentaActual: string;
+    suspendidoHasta: string | null;
+    totalSuspensiones: number;
+    historial: Suspension[];
+  }> {
+    if (!this.esDemo) {
+      try {
+        return await this.get(`/trabajadores/${id}/suspensiones`);
+      } catch (e) {
+        console.error('Error al consultar suspensiones:', e);
+        return {
+          idPerfil: id,
+          nombreTrabajador: '',
+          estadoCuentaActual: 'DESCONOCIDO',
+          suspendidoHasta: null,
+          totalSuspensiones: 0,
+          historial: [],
+        };
+      }
+    }
+    const t = this.obtenerTrabajador(id);
+    return {
+      idPerfil: id,
+      nombreTrabajador: t?.nombre || '',
+      estadoCuentaActual: t?.estado || 'ACTIVO',
+      suspendidoHasta: t?.suspendidoHasta || null,
+      totalSuspensiones: t?.estado === 'SUSPENDIDO' ? 1 : 0,
+      historial: t?.estado === 'SUSPENDIDO'
+        ? [
+            {
+              idSuspension: 1,
+              motivo: t.motivoRechazo || 'Suspensión temporal por administración',
+              fechaInicio: new Date().toISOString(),
+              fechaFin: t.suspendidoHasta || new Date().toISOString(),
+              dias: 7,
+              activa: true,
+              esVigente: true,
+              fechaCreacion: new Date().toISOString(),
+              creadoPor: 'Administrador Demo',
+            },
+          ]
+        : [],
+    };
   }
 
   async agregarCatalogo(tipo: 'categoria' | 'zona', nombre: string): Promise<string | null> {

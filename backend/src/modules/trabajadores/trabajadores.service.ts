@@ -1,12 +1,15 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 import { PerfilTrabajador } from '../../entities/PerfilTrabajador';
 import { Usuario } from '../../entities/Usuario';
 import { HorarioAtencion } from '../../entities/HorarioAtencion';
+import { SuspensionTrabajador } from '../../entities/SuspensionTrabajador';
 import { EstadoCuenta, RolUsuario } from '../../common/enums';
 import { VerificarTrabajadorDto } from './dto/verificar-trabajador.dto';
 import { ConfigurarAgendaQrDto } from './dto/configurar-agenda-qr.dto';
+import { SuspenderTrabajadorDto } from './dto/suspender-trabajador.dto';
+import { LevantarSuspensionDto } from './dto/levantar-suspension.dto';
 import { sanitizeTrabajador } from '../../common/serializers/entity-sanitizer';
 
 function horaAMinutos(hora: string): number {
@@ -21,6 +24,8 @@ export class TrabajadoresService {
     private readonly perfilRepo: Repository<PerfilTrabajador>,
     @InjectRepository(Usuario)
     private readonly usuarioRepo: Repository<Usuario>,
+    @InjectRepository(SuspensionTrabajador)
+    private readonly suspensionRepo: Repository<SuspensionTrabajador>,
     private readonly dataSource: DataSource,
   ) {}
 
@@ -198,5 +203,184 @@ export class TrabajadoresService {
       includeContact: true,
       includeQr: true,
     });
+  }
+
+  // RF-17: Suspender temporalmente a un trabajador (Solo ADMIN)
+  async suspender(idPerfil: number, dto: SuspenderTrabajadorDto, admin: Usuario) {
+    const perfil = await this.perfilRepo.findOne({
+      where: { idPerfil },
+      relations: ['usuario'],
+    });
+
+    if (!perfil) {
+      throw new NotFoundException(`Perfil de trabajador no encontrado con ID: ${idPerfil}`);
+    }
+
+    const usuario = perfil.usuario;
+    if (usuario.rol !== RolUsuario.TRABAJADOR) {
+      throw new BadRequestException('El usuario no corresponde a un perfil de trabajador');
+    }
+
+    if (usuario.estadoCuenta === EstadoCuenta.BLOQUEADO_PERMANENTE) {
+      throw new BadRequestException('La cuenta se encuentra bloqueada permanentemente y no puede modificarse.');
+    }
+
+    const inicio = dto.fechaInicio ? new Date(dto.fechaInicio) : new Date();
+    let fin: Date;
+
+    if (dto.fechaFin) {
+      fin = new Date(dto.fechaFin);
+    } else {
+      const dias = dto.dias && dto.dias > 0 ? dto.dias : 7;
+      fin = new Date(inicio.getTime() + dias * 24 * 60 * 60 * 1000);
+    }
+
+    if (fin.getTime() <= inicio.getTime()) {
+      throw new BadRequestException('La fecha de fin de la suspensión debe ser posterior a la fecha de inicio');
+    }
+
+    const duracionDias = Math.max(1, Math.ceil((fin.getTime() - inicio.getTime()) / (1000 * 60 * 60 * 24)));
+
+    // Desactivar suspensiones activas previas
+    await this.suspensionRepo.update(
+      { trabajador: { idPerfil: perfil.idPerfil }, activa: true },
+      { activa: false, observacionLevantamiento: 'Superada por nueva suspensión aplicada por administración' },
+    );
+
+    // Crear registro en el historial de suspensiones
+    const suspension = this.suspensionRepo.create({
+      trabajador: perfil,
+      motivo: dto.motivo,
+      fechaInicio: inicio,
+      fechaFin: fin,
+      dias: duracionDias,
+      activa: true,
+      creadoPor: admin,
+    });
+
+    await this.suspensionRepo.save(suspension);
+
+    // Actualizar estado y fecha en usuario
+    usuario.estadoCuenta = EstadoCuenta.SUSPENDIDO;
+    usuario.suspendidoHasta = fin;
+    await this.usuarioRepo.save(usuario);
+
+    return {
+      mensaje: `Trabajador suspendido temporalmente por ${duracionDias} día(s).`,
+      idSuspension: suspension.idSuspension,
+      idPerfil,
+      idUsuario: usuario.idUsuario,
+      nombreTrabajador: usuario.nombreCompleto,
+      estadoCuenta: usuario.estadoCuenta,
+      motivo: suspension.motivo,
+      fechaInicio: suspension.fechaInicio,
+      fechaFin: suspension.fechaFin,
+      dias: duracionDias,
+      suspendidoPor: admin.nombreCompleto,
+    };
+  }
+
+  // RF-17: Consultar historial de suspensiones (ADMIN o el propio TRABAJADOR)
+  async consultarSuspensiones(idPerfil: number, usuarioActual: Usuario) {
+    const perfil = await this.perfilRepo.findOne({
+      where: { idPerfil },
+      relations: ['usuario'],
+    });
+
+    if (!perfil) {
+      throw new NotFoundException(`Perfil de trabajador no encontrado con ID: ${idPerfil}`);
+    }
+
+    // Permisos: Solo ADMIN o el mismo trabajador dueño de su perfil
+    if (
+      usuarioActual.rol !== RolUsuario.ADMIN &&
+      usuarioActual.idUsuario !== perfil.usuario.idUsuario
+    ) {
+      throw new ForbiddenException('No tiene permisos para consultar el historial de suspensiones de este trabajador');
+    }
+
+    const ahora = new Date();
+    // Auto-restaurar si el periodo de suspensión venció
+    if (perfil.usuario.estadoCuenta === EstadoCuenta.SUSPENDIDO && perfil.usuario.suspendidoHasta) {
+      if (ahora > new Date(perfil.usuario.suspendidoHasta)) {
+        perfil.usuario.estadoCuenta = EstadoCuenta.ACTIVO;
+        perfil.usuario.suspendidoHasta = null;
+        await this.usuarioRepo.save(perfil.usuario);
+        await this.suspensionRepo.update(
+          { trabajador: { idPerfil }, activa: true },
+          { activa: false },
+        );
+      }
+    }
+
+    const suspensiones = await this.suspensionRepo.find({
+      where: { trabajador: { idPerfil } },
+      relations: ['creadoPor', 'levantadoPor'],
+      order: { fechaCreacion: 'DESC' },
+    });
+
+    return {
+      idPerfil,
+      nombreTrabajador: perfil.usuario.nombreCompleto,
+      estadoCuentaActual: perfil.usuario.estadoCuenta,
+      suspendidoHasta: perfil.usuario.suspendidoHasta,
+      totalSuspensiones: suspensiones.length,
+      historial: suspensiones.map((s) => {
+        const esVigente = s.activa && ahora >= new Date(s.fechaInicio) && ahora <= new Date(s.fechaFin);
+        return {
+          idSuspension: s.idSuspension,
+          motivo: s.motivo,
+          fechaInicio: s.fechaInicio,
+          fechaFin: s.fechaFin,
+          dias: s.dias,
+          activa: s.activa,
+          esVigente,
+          fechaCreacion: s.fechaCreacion,
+          creadoPor: s.creadoPor ? s.creadoPor.nombreCompleto : 'Administración',
+          fechaLevantamiento: s.fechaLevantamiento,
+          observacionLevantamiento: s.observacionLevantamiento,
+          levantadoPor: s.levantadoPor ? s.levantadoPor.nombreCompleto : null,
+        };
+      }),
+    };
+  }
+
+  // RF-17: Levantar suspensión anticipadamente (Solo ADMIN)
+  async levantarSuspension(idPerfil: number, dto: LevantarSuspensionDto, admin: Usuario) {
+    const perfil = await this.perfilRepo.findOne({
+      where: { idPerfil },
+      relations: ['usuario'],
+    });
+
+    if (!perfil) {
+      throw new NotFoundException(`Perfil de trabajador no encontrado con ID: ${idPerfil}`);
+    }
+
+    const usuario = perfil.usuario;
+    if (usuario.estadoCuenta === EstadoCuenta.BLOQUEADO_PERMANENTE) {
+      throw new BadRequestException('La cuenta está bloqueada permanentemente y no puede ser reactivada.');
+    }
+
+    await this.suspensionRepo.update(
+      { trabajador: { idPerfil }, activa: true },
+      {
+        activa: false,
+        fechaLevantamiento: new Date(),
+        observacionLevantamiento: dto.motivo || 'Suspensión levantada manualmente por el administrador.',
+        levantadoPor: admin,
+      },
+    );
+
+    usuario.estadoCuenta = EstadoCuenta.ACTIVO;
+    usuario.suspendidoHasta = null;
+    await this.usuarioRepo.save(usuario);
+
+    return {
+      mensaje: 'Suspensión levantada con éxito. El trabajador se encuentra ACTIVO nuevamente.',
+      idPerfil,
+      idUsuario: usuario.idUsuario,
+      nombreTrabajador: usuario.nombreCompleto,
+      estadoCuenta: usuario.estadoCuenta,
+    };
   }
 }

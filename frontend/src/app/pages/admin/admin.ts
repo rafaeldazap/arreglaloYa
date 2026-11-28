@@ -1,7 +1,8 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { DatosService } from '../../services/datos.service';
-import { estrellas, nombresEstado, nombresMotivo } from '../../formato';
+import { estrellas, fechaHora, nombresEstado, nombresMotivo } from '../../formato';
+import { Suspension, Trabajador } from '../../models';
 
 type Pestana = 'trabajadores' | 'catalogos' | 'reclamos' | 'reportes';
 
@@ -31,6 +32,69 @@ export class Admin {
 
   // Reclamos
   resolucion: Record<number, string> = {};
+
+  // Suspensión de trabajador (RF-17)
+  fechaHora = fechaHora;
+  suspendiendo = signal<Trabajador | null>(null);
+  motivoSuspension = '';
+  diasSuspension = 7;
+  errorSuspension = signal('');
+
+  // Historial de suspensiones (RF-17)
+  viendoHistorial = signal<Trabajador | null>(null);
+  historialSuspensiones = signal<Suspension[]>([]);
+  cargandoHistorial = signal(false);
+
+  abrirSuspender(t: Trabajador) {
+    this.suspendiendo.set(t);
+    this.motivoSuspension = '';
+    this.diasSuspension = 7;
+    this.errorSuspension.set('');
+  }
+
+  cancelarSuspender() {
+    this.suspendiendo.set(null);
+    this.motivoSuspension = '';
+    this.errorSuspension.set('');
+  }
+
+  async confirmarSuspender() {
+    const t = this.suspendiendo();
+    if (!t) return;
+    if (!this.motivoSuspension.trim()) {
+      this.errorSuspension.set('Debe ingresar un motivo para la suspensión.');
+      return;
+    }
+    if (!this.diasSuspension || this.diasSuspension < 1) {
+      this.errorSuspension.set('El periodo de suspensión debe ser de al menos 1 día.');
+      return;
+    }
+
+    const err = await this.datos.suspenderTrabajador(t.id, this.motivoSuspension.trim(), this.diasSuspension);
+    if (err) {
+      this.errorSuspension.set(err);
+    } else {
+      this.cancelarSuspender();
+    }
+  }
+
+  async levantarSuspension(t: Trabajador) {
+    if (!confirm(`¿Estás seguro de levantar la suspensión y reactivar a ${t.nombre}?`)) return;
+    await this.datos.levantarSuspensionTrabajador(t.id, 'Levantamiento anticipado por el administrador');
+  }
+
+  async abrirHistorial(t: Trabajador) {
+    this.viendoHistorial.set(t);
+    this.cargandoHistorial.set(true);
+    const resp = await this.datos.consultarSuspensionesTrabajador(t.id);
+    this.historialSuspensiones.set(resp.historial || []);
+    this.cargandoHistorial.set(false);
+  }
+
+  cerrarHistorial() {
+    this.viendoHistorial.set(null);
+    this.historialSuspensiones.set([]);
+  }
 
   async rechazar(id: number) {
     if (!this.motivoRechazo.trim()) return;

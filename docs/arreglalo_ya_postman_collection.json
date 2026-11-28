@@ -1,0 +1,500 @@
+{
+  "info": {
+    "_postman_id": "a918e69b-8e12-4c22-b5e8-arreglaloya01",
+    "name": "Arréglalo Ya - API REST",
+    "description": "Colección completa para pruebas de la API REST de Arréglalo Ya (Sistemas de Información I).\nIncluye flujos de Autenticación, Catálogos, Búsqueda, Solicitudes, Cotizaciones, Pagos (Anticipo 25% y Saldo), Calificaciones, Reclamos y Administración.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8080/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "token_cliente",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "token_trabajador",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "token_admin",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "id_solicitud",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "id_cotizacion",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "id_pago",
+      "value": "1",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Autenticación",
+      "item": [
+        {
+          "name": "Login Cliente (Guarda token_cliente)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res.access_token) {",
+                  "    pm.collectionVariables.set('token_cliente', res.access_token);",
+                  "    pm.environment.set('token_cliente', res.access_token);",
+                  "    console.log('Token cliente guardado');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"cliente@demo.com\",\n  \"contrasena\": \"123456\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/auth/login", "host": ["{{base_url}}"], "path": ["auth", "login"] }
+          }
+        },
+        {
+          "name": "Login Trabajador (Guarda token_trabajador)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res.access_token) {",
+                  "    pm.collectionVariables.set('token_trabajador', res.access_token);",
+                  "    pm.environment.set('token_trabajador', res.access_token);",
+                  "    console.log('Token trabajador guardado');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"trabajador@demo.com\",\n  \"contrasena\": \"123456\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/auth/login", "host": ["{{base_url}}"], "path": ["auth", "login"] }
+          }
+        },
+        {
+          "name": "Login Admin (Guarda token_admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res.access_token) {",
+                  "    pm.collectionVariables.set('token_admin', res.access_token);",
+                  "    pm.environment.set('token_admin', res.access_token);",
+                  "    console.log('Token admin guardado');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"admin@demo.com\",\n  \"contrasena\": \"123456\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/auth/login", "host": ["{{base_url}}"], "path": ["auth", "login"] }
+          }
+        },
+        {
+          "name": "Ver Mi Perfil (GET /auth/me)",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token_cliente}}", "type": "string" }] },
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/auth/me", "host": ["{{base_url}}"], "path": ["auth", "me"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Catálogos y Búsqueda",
+      "item": [
+        {
+          "name": "Listar Categorías (Público)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/categorias", "host": ["{{base_url}}"], "path": ["categorias"] }
+          }
+        },
+        {
+          "name": "Listar Zonas (Público)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/zonas", "host": ["{{base_url}}"], "path": ["zonas"] }
+          }
+        },
+        {
+          "name": "Buscar Trabajadores (Público)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/trabajadores?categoria=Plomería&zona=Centro",
+              "host": ["{{base_url}}"],
+              "path": ["trabajadores"],
+              "query": [
+                { "key": "categoria", "value": "Plomería" },
+                { "key": "zona", "value": "Centro" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Ver Detalle de Trabajador",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/trabajadores/2", "host": ["{{base_url}}"], "path": ["trabajadores", "2"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Flujo Principal de Servicio",
+      "item": [
+        {
+          "name": "Paso 1: Cliente Crea Solicitud",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res.id) {",
+                  "    pm.collectionVariables.set('id_solicitud', res.id);",
+                  "    pm.environment.set('id_solicitud', res.id);",
+                  "    console.log('ID Solicitud capturado:', res.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token_cliente}}", "type": "string" }] },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idCategoria\": 1,\n  \"idZona\": 1,\n  \"descripcion\": \"Fuga de agua severa en la tubería principal bajo el lavaplatos.\",\n  \"direccionExacta\": \"Av. América y Pando #452, Edif. Los Pinos Dpto 3B\",\n  \"presupuestoEstimado\": 120.0,\n  \"fechaDeseada\": \"2026-12-01T09:00:00Z\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/solicitudes", "host": ["{{base_url}}"], "path": ["solicitudes"] }
+          }
+        },
+        {
+          "name": "Paso 2: Trabajador Consulta Bandeja Zonal",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token_trabajador}}", "type": "string" }] },
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/solicitudes/bandeja-zonal", "host": ["{{base_url}}"], "path": ["solicitudes", "bandeja-zonal"] }
+          }
+        },
+        {
+          "name": "Paso 3: Trabajador Envía Cotización",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res.id) {",
+                  "    pm.collectionVariables.set('id_cotizacion', res.id);",
+                  "    pm.environment.set('id_cotizacion', res.id);",
+                  "    console.log('ID Cotización capturado:', res.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token_trabajador}}", "type": "string" }] },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idSolicitud\": {{id_solicitud}},\n  \"montoTotalPropuesto\": 160.0,\n  \"incluyeMateriales\": true,\n  \"requiereVisita\": false,\n  \"fechaHoraPropuesta\": \"2026-12-01T10:00:00Z\",\n  \"tiempoEstimadoHoras\": 2\n}"
+            },
+            "url": { "raw": "{{base_url}}/cotizaciones", "host": ["{{base_url}}"], "path": ["cotizaciones"] }
+          }
+        },
+        {
+          "name": "Paso 4: Cliente Acepta Cotización",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token_cliente}}", "type": "string" }] },
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/cotizaciones/{{id_cotizacion}}/responder?estado=ACEPTADA",
+              "host": ["{{base_url}}"],
+              "path": ["cotizaciones", "{{id_cotizacion}}", "responder"],
+              "query": [{ "key": "estado", "value": "ACEPTADA" }]
+            }
+          }
+        },
+        {
+          "name": "Paso 5: Cliente Paga Anticipo (25%)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res.id) {",
+                  "    pm.collectionVariables.set('id_pago', res.id);",
+                  "    pm.environment.set('id_pago', res.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token_cliente}}", "type": "string" }] },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idSolicitud\": {{id_solicitud}},\n  \"tipo\": \"ANTICIPO_25\",\n  \"medioPago\": \"QR_TRABAJADOR\",\n  \"monto\": 40.0\n}"
+            },
+            "url": { "raw": "{{base_url}}/pagos", "host": ["{{base_url}}"], "path": ["pagos"] }
+          }
+        },
+        {
+          "name": "Paso 6: Trabajador Inicia Trabajo",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token_trabajador}}", "type": "string" }] },
+            "method": "PATCH",
+            "header": [],
+            "url": { "raw": "{{base_url}}/panel/pedidos/{{id_solicitud}}/iniciar", "host": ["{{base_url}}"], "path": ["panel", "pedidos", "{{id_solicitud}}", "iniciar"] }
+          }
+        },
+        {
+          "name": "Paso 7: Trabajador Termina Trabajo",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token_trabajador}}", "type": "string" }] },
+            "method": "PATCH",
+            "header": [],
+            "url": { "raw": "{{base_url}}/panel/pedidos/{{id_solicitud}}/terminar", "host": ["{{base_url}}"], "path": ["panel", "pedidos", "{{id_solicitud}}", "terminar"] }
+          }
+        },
+        {
+          "name": "Paso 8: Cliente Paga Saldo (75%)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res.id) {",
+                  "    pm.collectionVariables.set('id_pago', res.id);",
+                  "    pm.environment.set('id_pago', res.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token_cliente}}", "type": "string" }] },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idSolicitud\": {{id_solicitud}},\n  \"tipo\": \"SALDO_75\",\n  \"medioPago\": \"QR_TRABAJADOR\",\n  \"monto\": 120.0\n}"
+            },
+            "url": { "raw": "{{base_url}}/pagos", "host": ["{{base_url}}"], "path": ["pagos"] }
+          }
+        },
+        {
+          "name": "Paso 9: Trabajador Confirma Saldo (Doble Firma)",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token_trabajador}}", "type": "string" }] },
+            "method": "PATCH",
+            "header": [],
+            "url": { "raw": "{{base_url}}/pagos/{{id_pago}}/confirmar", "host": ["{{base_url}}"], "path": ["pagos", "{{id_pago}}", "confirmar"] }
+          }
+        },
+        {
+          "name": "Paso 10: Calificación Mutua",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token_cliente}}", "type": "string" }] },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idSolicitud\": {{id_solicitud}},\n  \"puntaje\": 5,\n  \"comentario\": \"Excelente atención, puntual y trabajo garantizado.\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/calificaciones", "host": ["{{base_url}}"], "path": ["calificaciones"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Reclamos y Sanciones",
+      "item": [
+        {
+          "name": "Presentar Reclamo",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token_cliente}}", "type": "string" }] },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idSolicitud\": {{id_solicitud}},\n  \"motivo\": \"INASISTENCIA\",\n  \"descripcion\": \"El trabajador no se presentó en la fecha acordada.\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/reclamos", "host": ["{{base_url}}"], "path": ["reclamos"] }
+          }
+        },
+        {
+          "name": "Admin: Listar Reclamos",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token_admin}}", "type": "string" }] },
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/reclamos", "host": ["{{base_url}}"], "path": ["reclamos"] }
+          }
+        },
+        {
+          "name": "Admin: Resolver Reclamo",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token_admin}}", "type": "string" }] },
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"resolucion\": \"PROCEDENTE\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/reclamos/1/resolver", "host": ["{{base_url}}"], "path": ["reclamos", "1", "resolver"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Administración",
+      "item": [
+        {
+          "name": "Listar Trabajadores Pendientes de Aprobación",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token_admin}}", "type": "string" }] },
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/trabajadores/admin/pendientes", "host": ["{{base_url}}"], "path": ["trabajadores", "admin", "pendientes"] }
+          }
+        },
+        {
+          "name": "Aprobar Trabajador",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token_admin}}", "type": "string" }] },
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"aprobado\": true,\n  \"motivo\": \"Documentación verificada correctamente (CI y antecedentes).\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/trabajadores/2/verificar", "host": ["{{base_url}}"], "path": ["trabajadores", "2", "verificar"] }
+          }
+        },
+        {
+          "name": "Admin: Suspender Trabajador (Motivo y Periodo)",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token_admin}}", "type": "string" }] },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"motivo\": \"Reclamos reiterados por inasistencia y demora injustificada en el inicio de labores.\",\n  \"dias\": 7\n}"
+            },
+            "url": { "raw": "{{base_url}}/trabajadores/2/suspender", "host": ["{{base_url}}"], "path": ["trabajadores", "2", "suspender"] }
+          }
+        },
+        {
+          "name": "Consultar Historial de Suspensiones",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token_admin}}", "type": "string" }] },
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/trabajadores/2/suspensiones", "host": ["{{base_url}}"], "path": ["trabajadores", "2", "suspensiones"] }
+          }
+        },
+        {
+          "name": "Admin: Levantar Suspensión Anticipada",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token_admin}}", "type": "string" }] },
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"motivo\": \"Se presentó descargos y se llegó a un acuerdo de conciliación con el cliente afectado.\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/trabajadores/2/levantar-suspension", "host": ["{{base_url}}"], "path": ["trabajadores", "2", "levantar-suspension"] }
+          }
+        },
+        {
+          "name": "Crear Categoría (Admin)",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token_admin}}", "type": "string" }] },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Cerrajería\",\n  \"descripcion\": \"Apertura de cerraduras, copiado de llaves y mantenimiento residencial.\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/categorias", "host": ["{{base_url}}"], "path": ["categorias"] }
+          }
+        },
+        {
+          "name": "Crear Zona (Admin)",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token_admin}}", "type": "string" }] },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Zona Sur - La Chimba\",\n  \"descripcion\": \"Distrito 5 de Cochabamba\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/zonas", "host": ["{{base_url}}"], "path": ["zonas"] }
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -20,6 +20,24 @@
 .agenda-item .hora { display: flex; flex-direction: column; color: var(--azul); }
 .agenda-item p { margin: 4px 0 0; }
 .aviso-revision { background: #fff8ef; border-color: var(--naranja); }
+.aviso-suspension { background: #fff5f5; border-color: #f87171; border-width: 2px; }
+.aviso-suspension h3 { color: #dc2626; margin: 0 0 6px; }
+
+/* Modales e Historial de Suspensiones */
+.modal-fondo { position: fixed; inset: 0; background: rgba(0,0,0,.5); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 16px; }
+.modal-caja { background: #fff; border-radius: 12px; width: 100%; max-width: 600px; padding: 24px; box-shadow: 0 10px 25px rgba(0,0,0,.2); max-height: 90vh; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
+.fila-titulo { display: flex; justify-content: space-between; align-items: center; }
+.fila-titulo h3 { margin: 0; }
+.btn-cerrar { background: none; border: none; font-size: 1.2rem; cursor: pointer; color: var(--gris); }
+.modal-botones { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
+.item-historial { border: 1px solid var(--borde); border-radius: 8px; padding: 12px; background: #fafafa; display: flex; flex-direction: column; gap: 4px; font-size: .9rem; }
+.item-historial.vigente { border-color: #fca5a5; background: #fff5f5; }
+.item-historial-cabecera { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+.etiqueta-vigente { font-size: .75rem; font-weight: bold; text-transform: uppercase; padding: 2px 8px; border-radius: 4px; background: #e5e7eb; color: #374151; }
+.etiqueta-vigente.activa { background: #fee2e2; color: #dc2626; border: 1px solid #f87171; }
+.fecha-historial { font-size: .8rem; color: var(--gris); }
+.texto-levantado { color: #15803d; font-size: .85rem; margin-top: 4px; }
+
 .opinion { border-top: 1px solid var(--borde); padding: 8px 0; }
 .opinion p { margin: 4px 0; }
 @media (max-width: 600px) {

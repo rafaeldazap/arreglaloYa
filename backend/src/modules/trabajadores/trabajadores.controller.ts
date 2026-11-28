@@ -1,6 +1,7 @@
 import {
   Controller,
   Get,
+  Post,
   Patch,
   Param,
   Query,
@@ -13,6 +14,8 @@ import { TrabajadoresService } from './trabajadores.service';
 import { VerificarTrabajadorDto } from './dto/verificar-trabajador.dto';
 import { ConfigurarAgendaQrDto } from './dto/configurar-agenda-qr.dto';
 import { BuscarTrabajadoresQueryDto } from './dto/buscar-trabajadores-query.dto';
+import { SuspenderTrabajadorDto } from './dto/suspender-trabajador.dto';
+import { LevantarSuspensionDto } from './dto/levantar-suspension.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -82,5 +85,42 @@ export class TrabajadoresController {
     @Body() dto: ConfigurarAgendaQrDto,
   ) {
     return this.trabajadoresService.configurarAgendaQr(usuario, dto);
+  }
+
+  @Post(':id/suspender')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(RolUsuario.ADMIN)
+  @ApiOperation({ summary: 'Suspender temporalmente a un trabajador estableciendo motivo y periodo (Solo ADMIN)' })
+  suspender(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: SuspenderTrabajadorDto,
+    @CurrentUser() admin: Usuario,
+  ) {
+    return this.trabajadoresService.suspender(id, dto, admin);
+  }
+
+  @Get(':id/suspensiones')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Consultar historial de suspensiones del trabajador (ADMIN o el propio trabajador)' })
+  consultarSuspensiones(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser() usuario: Usuario,
+  ) {
+    return this.trabajadoresService.consultarSuspensiones(id, usuario);
+  }
+
+  @Patch(':id/levantar-suspension')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(RolUsuario.ADMIN)
+  @ApiOperation({ summary: 'Levantar anticipadamente la suspensión temporal de un trabajador (Solo ADMIN)' })
+  levantarSuspension(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: LevantarSuspensionDto,
+    @CurrentUser() admin: Usuario,
+  ) {
+    return this.trabajadoresService.levantarSuspension(id, dto, admin);
   }
 }

@@ -1,0 +1,619 @@
+{
+  "info": {
+    "_postman_id": "7fae29bc-4389-482a-a92c-arreglaloyav1",
+    "name": "Arréglalo Ya - API REST Completa",
+    "description": "Colección oficial y exhaustiva de pruebas para la API REST de Arréglalo Ya (NestJS + TypeORM + PostgreSQL).\nIncluye scripts de prueba que capturan y asignan automáticamente los tokens JWT y los IDs de recursos para encadenar las pruebas sin esfuerzo.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:8080/api/v1", "type": "string" },
+    { "key": "token_cliente", "value": "", "type": "string" },
+    { "key": "token_trabajador", "value": "", "type": "string" },
+    { "key": "token_admin", "value": "", "type": "string" },
+    { "key": "id_solicitud", "value": "1", "type": "string" },
+    { "key": "id_cotizacion", "value": "1", "type": "string" },
+    { "key": "id_pago", "value": "1", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "1. Autenticación",
+      "item": [
+        {
+          "name": "Login Cliente (Auto-guarda JWT)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res.access_token) {",
+                  "    pm.environment.set('token_cliente', res.access_token);",
+                  "    pm.collectionVariables.set('token_cliente', res.access_token);",
+                  "    console.log('✅ Token Cliente guardado:', res.access_token.substring(0, 20) + '...');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"cliente@demo.com\",\n  \"contrasena\": \"123456\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/auth/login", "host": ["{{base_url}}"], "path": ["auth", "login"] }
+          }
+        },
+        {
+          "name": "Login Trabajador (Auto-guarda JWT)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res.access_token) {",
+                  "    pm.environment.set('token_trabajador', res.access_token);",
+                  "    pm.collectionVariables.set('token_trabajador', res.access_token);",
+                  "    console.log('✅ Token Trabajador guardado:', res.access_token.substring(0, 20) + '...');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"trabajador@demo.com\",\n  \"contrasena\": \"123456\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/auth/login", "host": ["{{base_url}}"], "path": ["auth", "login"] }
+          }
+        },
+        {
+          "name": "Login Administrador (Auto-guarda JWT)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res.access_token) {",
+                  "    pm.environment.set('token_admin', res.access_token);",
+                  "    pm.collectionVariables.set('token_admin', res.access_token);",
+                  "    console.log('✅ Token Admin guardado:', res.access_token.substring(0, 20) + '...');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"admin@demo.com\",\n  \"contrasena\": \"123456\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/auth/login", "host": ["{{base_url}}"], "path": ["auth", "login"] }
+          }
+        },
+        {
+          "name": "Consultar Mi Perfil (/auth/me)",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token_cliente}}", "type": "string" }] },
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/auth/me", "host": ["{{base_url}}"], "path": ["auth", "me"] }
+          }
+        },
+        {
+          "name": "Registro Nuevo Cliente",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Carlos\",\n  \"apellido\": \"Mendoza\",\n  \"correo\": \"carlos.mendoza@ejemplo.com\",\n  \"telefono\": \"70712345\",\n  \"contrasena\": \"ClaveSegura123!\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/auth/registro-cliente", "host": ["{{base_url}}"], "path": ["auth", "registro-cliente"] }
+          }
+        },
+        {
+          "name": "Registro Nuevo Trabajador (Queda en REVISION)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Roberto\",\n  \"apellido\": \"Flores\",\n  \"correo\": \"roberto.flores@ejemplo.com\",\n  \"telefono\": \"71798765\",\n  \"contrasena\": \"ClaveSegura123!\",\n  \"ci\": \"6543210-CB\",\n  \"experiencia\": \"Más de 8 años en instalaciones de plomería y gas domiciliario.\",\n  \"idCategorias\": [1],\n  \"idZonas\": [1, 2],\n  \"urlFotoCi\": \"https://ejemplo.com/docs/ci_anverso.jpg\",\n  \"urlAntecedentes\": \"https://ejemplo.com/docs/felcc.jpg\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/auth/registro-trabajador", "host": ["{{base_url}}"], "path": ["auth", "registro-trabajador"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Catálogos y Zonas",
+      "item": [
+        {
+          "name": "Listar Categorías Activas (Público)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/categorias", "host": ["{{base_url}}"], "path": ["categorias"] }
+          }
+        },
+        {
+          "name": "Listar Zonas Activas de Cochabamba (Público)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/zonas", "host": ["{{base_url}}"], "path": ["zonas"] }
+          }
+        },
+        {
+          "name": "Admin: Listar Todas las Categorías",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token_admin}}", "type": "string" }] },
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/categorias/todas", "host": ["{{base_url}}"], "path": ["categorias", "todas"] }
+          }
+        },
+        {
+          "name": "Admin: Crear Nueva Categoría",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token_admin}}", "type": "string" }] },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Cerrajería\",\n  \"descripcion\": \"Apertura y reparación de cerraduras residenciales y de seguridad.\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/categorias", "host": ["{{base_url}}"], "path": ["categorias"] }
+          }
+        },
+        {
+          "name": "Admin: Crear Nueva Zona",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token_admin}}", "type": "string" }] },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Zona Sur - Jaihuayco\",\n  \"descripcion\": \"Distrito 5 de Cochabamba\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/zonas", "host": ["{{base_url}}"], "path": ["zonas"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Trabajadores y Perfiles",
+      "item": [
+        {
+          "name": "Buscar Trabajadores Verificados (Público)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/trabajadores?categoria=Plomería&zona=Centro&page=1&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["trabajadores"],
+              "query": [
+                { "key": "categoria", "value": "Plomería" },
+                { "key": "zona", "value": "Centro" },
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Ver Perfil Público de un Trabajador",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/trabajadores/2", "host": ["{{base_url}}"], "path": ["trabajadores", "2"] }
+          }
+        },
+        {
+          "name": "Admin: Listar Trabajadores en Revisión",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token_admin}}", "type": "string" }] },
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/trabajadores/admin/pendientes", "host": ["{{base_url}}"], "path": ["trabajadores", "admin", "pendientes"] }
+          }
+        },
+        {
+          "name": "Admin: Aprobar Trabajador",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token_admin}}", "type": "string" }] },
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"aprobado\": true,\n  \"motivo\": \"Documentación verificada y antecedentes limpios.\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/trabajadores/2/verificar", "host": ["{{base_url}}"], "path": ["trabajadores", "2", "verificar"] }
+          }
+        },
+        {
+          "name": "Admin: Suspender Trabajador (Motivo y Periodo)",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token_admin}}", "type": "string" }] },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"motivo\": \"Reclamos reiterados por inasistencia y demora injustificada en el inicio de labores.\",\n  \"dias\": 7\n}"
+            },
+            "url": { "raw": "{{base_url}}/trabajadores/2/suspender", "host": ["{{base_url}}"], "path": ["trabajadores", "2", "suspender"] }
+          }
+        },
+        {
+          "name": "Consultar Historial de Suspensiones",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token_admin}}", "type": "string" }] },
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/trabajadores/2/suspensiones", "host": ["{{base_url}}"], "path": ["trabajadores", "2", "suspensiones"] }
+          }
+        },
+        {
+          "name": "Admin: Levantar Suspensión Anticipada",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token_admin}}", "type": "string" }] },
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"motivo\": \"Se presentó descargos y se llegó a un acuerdo de conciliación con el cliente afectado.\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/trabajadores/2/levantar-suspension", "host": ["{{base_url}}"], "path": ["trabajadores", "2", "levantar-suspension"] }
+          }
+        },
+        {
+          "name": "Trabajador: Configurar Agenda y QR",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token_trabajador}}", "type": "string" }] },
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bufferMinutos\": 30,\n  \"qrCobro\": \"https://ejemplo.com/qrs/qr_cobro_banco.jpg\",\n  \"horarios\": [\n    {\n      \"diaSemana\": 1,\n      \"horaInicio\": \"08:00\",\n      \"horaFin\": \"18:00\"\n    },\n    {\n      \"diaSemana\": 2,\n      \"horaInicio\": \"08:00\",\n      \"horaFin\": \"18:00\"\n    }\n  ]\n}"
+            },
+            "url": { "raw": "{{base_url}}/trabajadores/mi-perfil/agenda-qr", "host": ["{{base_url}}"], "path": ["trabajadores", "mi-perfil", "agenda-qr"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Solicitudes de Servicio",
+      "item": [
+        {
+          "name": "Paso 1: Cliente Publica Solicitud (Auto-guarda ID)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res.id) {",
+                  "    pm.environment.set('id_solicitud', res.id);",
+                  "    pm.collectionVariables.set('id_solicitud', res.id);",
+                  "    console.log('✅ Solicitud creada con ID:', res.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token_cliente}}", "type": "string" }] },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idCategoria\": 1,\n  \"idZona\": 1,\n  \"descripcion\": \"Fuga de agua importante en la cañería del baño de visitas.\",\n  \"direccionExacta\": \"Calle España #250 entre Heroínas y Colombia\",\n  \"presupuestoEstimado\": 150.0,\n  \"fechaDeseada\": \"2026-12-05T09:30:00Z\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/solicitudes", "host": ["{{base_url}}"], "path": ["solicitudes"] }
+          }
+        },
+        {
+          "name": "Paso 2: Trabajador Consulta Bandeja Zonal",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token_trabajador}}", "type": "string" }] },
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/solicitudes/bandeja-zonal", "host": ["{{base_url}}"], "path": ["solicitudes", "bandeja-zonal"] }
+          }
+        },
+        {
+          "name": "Consultar Detalle de la Solicitud",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token_cliente}}", "type": "string" }] },
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/solicitudes/{{id_solicitud}}", "host": ["{{base_url}}"], "path": ["solicitudes", "{{id_solicitud}}"] }
+          }
+        },
+        {
+          "name": "Consultar Historial / Línea de Tiempo de Solicitud",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token_cliente}}", "type": "string" }] },
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/solicitudes/{{id_solicitud}}/historial", "host": ["{{base_url}}"], "path": ["solicitudes", "{{id_solicitud}}", "historial"] }
+          }
+        },
+        {
+          "name": "Cliente: Cancelar Solicitud",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token_cliente}}", "type": "string" }] },
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/solicitudes/{{id_solicitud}}/cancelar?motivo=Ya no requiero el servicio",
+              "host": ["{{base_url}}"],
+              "path": ["solicitudes", "{{id_solicitud}}", "cancelar"],
+              "query": [{ "key": "motivo", "value": "Ya no requiero el servicio" }]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Cotizaciones",
+      "item": [
+        {
+          "name": "Paso 3: Trabajador Envía Cotización (Auto-guarda ID)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res.id) {",
+                  "    pm.environment.set('id_cotizacion', res.id);",
+                  "    pm.collectionVariables.set('id_cotizacion', res.id);",
+                  "    console.log('✅ Cotización creada con ID:', res.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token_trabajador}}", "type": "string" }] },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idSolicitud\": {{id_solicitud}},\n  \"montoTotalPropuesto\": 180.0,\n  \"incluyeMateriales\": true,\n  \"requiereVisita\": false,\n  \"fechaHoraPropuesta\": \"2026-12-05T10:00:00Z\",\n  \"tiempoEstimadoHoras\": 2\n}"
+            },
+            "url": { "raw": "{{base_url}}/cotizaciones", "host": ["{{base_url}}"], "path": ["cotizaciones"] }
+          }
+        },
+        {
+          "name": "Listar Cotizaciones de una Solicitud",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token_cliente}}", "type": "string" }] },
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/cotizaciones/solicitud/{{id_solicitud}}", "host": ["{{base_url}}"], "path": ["cotizaciones", "solicitud", "{{id_solicitud}}"] }
+          }
+        },
+        {
+          "name": "Paso 4: Cliente Acepta Cotización",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token_cliente}}", "type": "string" }] },
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/cotizaciones/{{id_cotizacion}}/responder?estado=ACEPTADA",
+              "host": ["{{base_url}}"],
+              "path": ["cotizaciones", "{{id_cotizacion}}", "responder"],
+              "query": [{ "key": "estado", "value": "ACEPTADA" }]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Pagos (Anticipo y Saldo)",
+      "item": [
+        {
+          "name": "Paso 5: Cliente Paga Anticipo (25%)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res.id) {",
+                  "    pm.environment.set('id_pago', res.id);",
+                  "    pm.collectionVariables.set('id_pago', res.id);",
+                  "    console.log('✅ Pago de anticipo registrado con ID:', res.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token_cliente}}", "type": "string" }] },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idSolicitud\": {{id_solicitud}},\n  \"tipo\": \"ANTICIPO_25\",\n  \"medioPago\": \"QR_TRABAJADOR\",\n  \"monto\": 45.0\n}"
+            },
+            "url": { "raw": "{{base_url}}/pagos", "host": ["{{base_url}}"], "path": ["pagos"] }
+          }
+        },
+        {
+          "name": "Consultar Historial de Pagos de la Solicitud",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token_cliente}}", "type": "string" }] },
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/pagos/solicitud/{{id_solicitud}}", "host": ["{{base_url}}"], "path": ["pagos", "solicitud", "{{id_solicitud}}"] }
+          }
+        },
+        {
+          "name": "Paso 8: Cliente Paga Saldo Restante (75%)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res.id) {",
+                  "    pm.environment.set('id_pago', res.id);",
+                  "    pm.collectionVariables.set('id_pago', res.id);",
+                  "    console.log('✅ Pago de saldo registrado con ID:', res.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token_cliente}}", "type": "string" }] },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idSolicitud\": {{id_solicitud}},\n  \"tipo\": \"SALDO_75\",\n  \"medioPago\": \"QR_TRABAJADOR\",\n  \"monto\": 135.0\n}"
+            },
+            "url": { "raw": "{{base_url}}/pagos", "host": ["{{base_url}}"], "path": ["pagos"] }
+          }
+        },
+        {
+          "name": "Paso 9: Trabajador Confirma Recepción de Saldo (Doble Firma)",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token_trabajador}}", "type": "string" }] },
+            "method": "PATCH",
+            "header": [],
+            "url": { "raw": "{{base_url}}/pagos/{{id_pago}}/confirmar", "host": ["{{base_url}}"], "path": ["pagos", "{{id_pago}}", "confirmar"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "7. Panel Operativo",
+      "item": [
+        {
+          "name": "Paso 6: Trabajador Inicia Trabajo (APROBADO -> EN_PROCESO)",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token_trabajador}}", "type": "string" }] },
+            "method": "PATCH",
+            "header": [],
+            "url": { "raw": "{{base_url}}/panel/pedidos/{{id_solicitud}}/iniciar", "host": ["{{base_url}}"], "path": ["panel", "pedidos", "{{id_solicitud}}", "iniciar"] }
+          }
+        },
+        {
+          "name": "Paso 7: Trabajador Avisa que Terminó el Trabajo",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token_trabajador}}", "type": "string" }] },
+            "method": "PATCH",
+            "header": [],
+            "url": { "raw": "{{base_url}}/panel/pedidos/{{id_solicitud}}/terminar", "host": ["{{base_url}}"], "path": ["panel", "pedidos", "{{id_solicitud}}", "terminar"] }
+          }
+        },
+        {
+          "name": "Consultar Pedidos del Usuario Conectado",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token_cliente}}", "type": "string" }] },
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/panel/pedidos", "host": ["{{base_url}}"], "path": ["panel", "pedidos"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "8. Calificaciones",
+      "item": [
+        {
+          "name": "Paso 10: Calificar el Servicio Finalizado",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token_cliente}}", "type": "string" }] },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idSolicitud\": {{id_solicitud}},\n  \"puntaje\": 5,\n  \"comentario\": \"Excelente plomero. Llegó puntual y dejó el baño completamente limpio y solucionado.\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/calificaciones", "host": ["{{base_url}}"], "path": ["calificaciones"] }
+          }
+        },
+        {
+          "name": "Listar Calificaciones de un Usuario",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token_cliente}}", "type": "string" }] },
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/calificaciones/usuario/2", "host": ["{{base_url}}"], "path": ["calificaciones", "usuario", "2"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "9. Reclamos y Sanciones",
+      "item": [
+        {
+          "name": "Registrar Reclamo",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token_cliente}}", "type": "string" }] },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idSolicitud\": {{id_solicitud}},\n  \"motivo\": \"INASISTENCIA\",\n  \"descripcion\": \"El técnico no se presentó a la hora acordada y no contesta llamadas.\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/reclamos", "host": ["{{base_url}}"], "path": ["reclamos"] }
+          }
+        },
+        {
+          "name": "Consultar Reclamo de una Solicitud",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token_cliente}}", "type": "string" }] },
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/reclamos/solicitud/{{id_solicitud}}", "host": ["{{base_url}}"], "path": ["reclamos", "solicitud", "{{id_solicitud}}"] }
+          }
+        },
+        {
+          "name": "Admin: Listar Todos los Reclamos",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token_admin}}", "type": "string" }] },
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/reclamos", "host": ["{{base_url}}"], "path": ["reclamos"] }
+          }
+        },
+        {
+          "name": "Admin: Resolver Reclamo y Aplicar Sanción",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token_admin}}", "type": "string" }] },
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"resolucion\": \"PROCEDENTE\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/reclamos/1/resolver", "host": ["{{base_url}}"], "path": ["reclamos", "1", "resolver"] }
+          }
+        }
+      ]
+    }
+  ]
+}

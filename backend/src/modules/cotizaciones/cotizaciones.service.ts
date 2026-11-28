@@ -12,6 +12,7 @@ import { PerfilTrabajador } from '../../entities/PerfilTrabajador';
 import { HistorialEstado } from '../../entities/HistorialEstado';
 import { TransaccionPago } from '../../entities/TransaccionPago';
 import { Usuario } from '../../entities/Usuario';
+import { SuspensionTrabajador } from '../../entities/SuspensionTrabajador';
 import { CrearCotizacionDto } from './dto/crear-cotizacion.dto';
 import { ResponderCotizacionBodyDto } from './dto/responder-cotizacion-body.dto';
 import {
@@ -32,6 +33,10 @@ export class CotizacionesService {
     private readonly solicitudRepo: Repository<SolicitudServicio>,
     @InjectRepository(PerfilTrabajador)
     private readonly perfilRepo: Repository<PerfilTrabajador>,
+    @InjectRepository(Usuario)
+    private readonly usuarioRepo: Repository<Usuario>,
+    @InjectRepository(SuspensionTrabajador)
+    private readonly suspensionRepo: Repository<SuspensionTrabajador>,
     private readonly dataSource: DataSource,
   ) {}
 
@@ -76,6 +81,38 @@ export class CotizacionesService {
 
     if (!trabajador) {
       throw new BadRequestException('Solo los trabajadores registrados pueden cotizar');
+    }
+
+    const ahora = new Date();
+
+    // RF-17: Si la suspensión temporal ya expiró, reactivar la cuenta automáticamente
+    if (
+      trabajador.usuario.estadoCuenta === EstadoCuenta.SUSPENDIDO &&
+      trabajador.usuario.suspendidoHasta &&
+      ahora > new Date(trabajador.usuario.suspendidoHasta)
+    ) {
+      trabajador.usuario.estadoCuenta = EstadoCuenta.ACTIVO;
+      trabajador.usuario.suspendidoHasta = null;
+      await this.usuarioRepo.save(trabajador.usuario);
+      await this.suspensionRepo.update(
+        { trabajador: { idPerfil: trabajador.idPerfil }, activa: true },
+        { activa: false },
+      );
+    }
+
+    // RF-17: Impedir presentar nuevas cotizaciones durante el periodo de suspensión
+    if (trabajador.usuario.estadoCuenta === EstadoCuenta.SUSPENDIDO) {
+      const suspensionVigente = await this.suspensionRepo.findOne({
+        where: { trabajador: { idPerfil: trabajador.idPerfil }, activa: true },
+        order: { fechaCreacion: 'DESC' },
+      });
+      const motivo = suspensionVigente?.motivo || 'Medida disciplinaria administrativa';
+      const fechaFinStr = trabajador.usuario.suspendidoHasta
+        ? new Date(trabajador.usuario.suspendidoHasta).toLocaleString()
+        : 'indefinida';
+      throw new ForbiddenException(
+        `Su cuenta se encuentra suspendida temporalmente hasta ${fechaFinStr}. Motivo: "${motivo}". No se le permite presentar nuevas cotizaciones durante este periodo.`,
+      );
     }
 
     // RN-01, RN-02: Solo trabajadores con cuenta ACTIVA pueden emitir cotizaciones

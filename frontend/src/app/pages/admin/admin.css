@@ -25,4 +25,26 @@ tr:last-child td { border-bottom: none; }
 .barra-fila b { text-align: right; font-variant-numeric: tabular-nums; }
 .barra { background: #eef1f5; border-radius: 6px; height: 12px; overflow: hidden; }
 .barra div { background: var(--azul); height: 100%; border-radius: 6px; }
+
+/* Estilos de Suspensión e Historial (RF-17) */
+.acciones-tabla { display: flex; gap: 6px; flex-wrap: wrap; }
+.btn-exito { background: #16a34a; color: #fff; border: none; border-radius: 6px; cursor: pointer; }
+.btn-exito:hover { background: #15803d; }
+.texto-suspendido { font-size: .78rem; color: #b91c1c; font-weight: 500; margin-top: 4px; }
+.modal-fondo { position: fixed; inset: 0; background: rgba(0,0,0,.5); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 16px; }
+.modal-caja { background: #fff; border-radius: 12px; width: 100%; max-width: 500px; padding: 24px; box-shadow: 0 10px 25px rgba(0,0,0,.2); max-height: 90vh; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
+.modal-ancho { max-width: 650px; }
+.fila-titulo { display: flex; justify-content: space-between; align-items: center; }
+.fila-titulo h3 { margin: 0; }
+.btn-cerrar { background: none; border: none; font-size: 1.2rem; cursor: pointer; color: var(--gris); }
+.btn-cerrar:hover { color: #000; }
+.modal-botones { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
+.item-historial { border: 1px solid var(--borde); border-radius: 8px; padding: 12px; background: #fafafa; display: flex; flex-direction: column; gap: 4px; font-size: .9rem; }
+.item-historial.vigente { border-color: #fca5a5; background: #fff5f5; }
+.item-historial-cabecera { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+.etiqueta-vigente { font-size: .75rem; font-weight: bold; text-transform: uppercase; padding: 2px 8px; border-radius: 4px; background: #e5e7eb; color: #374151; }
+.etiqueta-vigente.activa { background: #fee2e2; color: #dc2626; border: 1px solid #f87171; }
+.fecha-historial { font-size: .8rem; color: var(--gris); }
+.texto-levantado { color: #15803d; font-size: .85rem; margin-top: 4px; }
+
 @media (max-width: 760px) { .catalogos, .reportes { grid-template-columns: 1fr; } }

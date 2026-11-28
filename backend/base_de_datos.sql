@@ -146,6 +146,21 @@ CREATE TABLE historial_estado (
     fecha_hora TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+CREATE TABLE suspension_trabajador (
+    id_suspension SERIAL PRIMARY KEY,
+    id_perfil INTEGER NOT NULL REFERENCES perfil_trabajador(id_perfil) ON DELETE CASCADE,
+    motivo TEXT NOT NULL,
+    fecha_inicio TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    fecha_fin TIMESTAMPTZ NOT NULL,
+    dias INTEGER NOT NULL DEFAULT 1,
+    activa BOOLEAN NOT NULL DEFAULT TRUE,
+    id_admin INTEGER REFERENCES usuario(id_usuario),
+    fecha_creacion TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    fecha_levantamiento TIMESTAMPTZ,
+    observacion_levantamiento TEXT,
+    id_admin_levantamiento INTEGER REFERENCES usuario(id_usuario)
+);
+
 -- Datos iniciales
 INSERT INTO categoria (nombre) VALUES ('Plomería'), ('Electricidad'), ('Albañilería'), ('Electrodomésticos');
 INSERT INTO zona (nombre) VALUES ('Centro'), ('Cala Cala'), ('Queru Queru'), ('Sarco'), ('Hipódromo'), ('Sacaba'), ('Quillacollo'), ('Tiquipaya');

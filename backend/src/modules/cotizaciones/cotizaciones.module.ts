@@ -7,6 +7,8 @@ import { SolicitudServicio } from '../../entities/SolicitudServicio';
 import { PerfilTrabajador } from '../../entities/PerfilTrabajador';
 import { HistorialEstado } from '../../entities/HistorialEstado';
 import { TransaccionPago } from '../../entities/TransaccionPago';
+import { SuspensionTrabajador } from '../../entities/SuspensionTrabajador';
+import { Usuario } from '../../entities/Usuario';
 
 @Module({
   imports: [
@@ -16,6 +18,8 @@ import { TransaccionPago } from '../../entities/TransaccionPago';
       PerfilTrabajador,
       HistorialEstado,
       TransaccionPago,
+      SuspensionTrabajador,
+      Usuario,
     ]),
   ],
   controllers: [CotizacionesController],

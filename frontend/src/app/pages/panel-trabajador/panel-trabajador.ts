@@ -1,6 +1,6 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Pedido } from '../../models';
+import { Pedido, Suspension } from '../../models';
 import { AuthService } from '../../services/auth.service';
 import { DatosService } from '../../services/datos.service';
 import { estrellas, fechaHora, nombresEstado } from '../../formato';
@@ -25,6 +25,27 @@ export class PanelTrabajador {
   // El perfil del trabajador que inició sesión
   trabajador = computed(() => this.datos.miPerfil(this.auth.usuario()));
   enRevision = computed(() => this.auth.usuario()?.estadoCuenta === 'REVISION' || this.trabajador()?.estado === 'REVISION');
+  estaSuspendido = computed(() => this.auth.usuario()?.estadoCuenta === 'SUSPENDIDO' || this.trabajador()?.estado === 'SUSPENDIDO');
+  suspendidoHasta = computed(() => this.trabajador()?.suspendidoHasta);
+
+  // Historial de suspensiones del propio trabajador (RF-17)
+  viendoMisSuspensiones = signal(false);
+  misSuspensiones = signal<Suspension[]>([]);
+  cargandoMisSuspensiones = signal(false);
+
+  async abrirMisSuspensiones() {
+    const t = this.trabajador();
+    if (!t) return;
+    this.viendoMisSuspensiones.set(true);
+    this.cargandoMisSuspensiones.set(true);
+    const resp = await this.datos.consultarSuspensionesTrabajador(t.id);
+    this.misSuspensiones.set(resp.historial || []);
+    this.cargandoMisSuspensiones.set(false);
+  }
+
+  cerrarMisSuspensiones() {
+    this.viendoMisSuspensiones.set(false);
+  }
 
   disponibles = computed(() => (this.trabajador() ? this.datos.pedidosDisponibles(this.trabajador()!) : []));
   cotizados = computed(() => (this.trabajador() ? this.datos.pedidosCotizados(this.trabajador()!) : []));
@@ -44,6 +65,10 @@ export class PanelTrabajador {
   duracionHoras = 2;
 
   abrirCotizacion(p: Pedido) {
+    if (this.estaSuspendido()) {
+      alert('Tu cuenta se encuentra suspendida temporalmente y no puedes presentar cotizaciones.');
+      return;
+    }
     this.cotizando.set(p.id);
     this.error.set('');
     this.requiereVisita = false;
@@ -55,6 +80,10 @@ export class PanelTrabajador {
   }
 
   async enviarCotizacion(p: Pedido) {
+    if (this.estaSuspendido()) {
+      this.error.set('Su cuenta se encuentra suspendida temporalmente. No puede enviar cotizaciones.');
+      return;
+    }
     const error = await this.datos.enviarCotizacion(p.id, this.trabajador()!, {
       requiereVisita: this.requiereVisita,
       costoVisita: this.requiereVisita ? this.costoVisita : 0,

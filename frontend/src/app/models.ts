@@ -31,6 +31,21 @@ export interface Opinion {
   fecha: string;
 }
 
+export interface Suspension {
+  idSuspension: number;
+  motivo: string;
+  fechaInicio: string;
+  fechaFin: string;
+  dias: number;
+  activa: boolean;
+  esVigente: boolean;
+  fechaCreacion: string;
+  creadoPor?: string;
+  fechaLevantamiento?: string;
+  observacionLevantamiento?: string;
+  levantadoPor?: string;
+}
+
 export interface Trabajador {
   id: number; // id del perfil de trabajador
   idUsuario?: number;
@@ -41,6 +56,7 @@ export interface Trabajador {
   zonas: string[];
   experiencia: string;
   estado: EstadoCuenta;
+  suspendidoHasta?: string;
   documentos: string[];
   motivoRechazo?: string;
   promedio: number;

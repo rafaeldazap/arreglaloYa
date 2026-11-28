@@ -13,6 +13,7 @@ import {
   ReclamoSancion,
   Calificacion,
   HistorialEstado,
+  SuspensionTrabajador,
 } from '../entities';
 
 export const getTypeOrmConfig = (configService: ConfigService): TypeOrmModuleOptions => ({
@@ -35,6 +36,7 @@ export const getTypeOrmConfig = (configService: ConfigService): TypeOrmModuleOpt
     ReclamoSancion,
     Calificacion,
     HistorialEstado,
+    SuspensionTrabajador,
   ],
   // DB_SYNC=true crea/actualiza las tablas automáticamente (útil en Codespaces).
   // Si ya ejecutaste base_de_datos.sql puedes dejarlo en false.

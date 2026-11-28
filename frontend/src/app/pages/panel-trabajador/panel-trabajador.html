@@ -6,6 +6,13 @@
       <h3>Tu cuenta está en revisión</h3>
       <p>Nuestro equipo está revisando tus documentos. Cuando el administrador apruebe tu cuenta, vas a poder ver pedidos de tu zona y enviar cotizaciones.</p>
     </div>
+  } @else if (estaSuspendido()) {
+    <div class="tarjeta aviso-suspension">
+      <h3>⚠️ Tu cuenta se encuentra temporalmente suspendida</h3>
+      <p>La administración ha suspendido temporalmente tu cuenta hasta: <strong>{{ suspendidoHasta() ? fechaHora(suspendidoHasta()!) : 'fecha indefinida' }}</strong>.</p>
+      <p class="ayuda">Durante el periodo de suspensión no puedes enviar nuevas cotizaciones para pedidos de trabajo.</p>
+      <button class="btn btn-gris chico" (click)="abrirMisSuspensiones()">Consultar mi historial de suspensiones</button>
+    </div>
   } @else if (!trabajador()) {
     <div class="tarjeta">No encontramos tu perfil de trabajador. Comunícate con el administrador.</div>
   } @else {
@@ -66,7 +73,7 @@
                   </div>
                 </div>
               } @else {
-                <button class="btn btn-secundario" (click)="abrirCotizacion(p)">Cotizar</button>
+                <button class="btn btn-secundario" [disabled]="estaSuspendido()" [title]="estaSuspendido() ? 'Cuenta suspendida: no puede cotizar' : 'Cotizar'" (click)="abrirCotizacion(p)">{{ estaSuspendido() ? 'Cuenta Suspendida' : 'Cotizar' }}</button>
               }
             </div>
           } @empty {
@@ -166,5 +173,47 @@
         }
       }
     }
+  }
+
+  @if (viendoMisSuspensiones()) {
+    <div class="modal-fondo">
+      <div class="modal-caja">
+        <div class="fila-titulo">
+          <h3>Mi Historial de Suspensiones</h3>
+          <button class="btn-cerrar" (click)="cerrarMisSuspensiones()">✕</button>
+        </div>
+
+        @if (cargandoMisSuspensiones()) {
+          <p class="ayuda">Cargando suspensiones...</p>
+        } @else {
+          @for (s of misSuspensiones(); track s.idSuspension) {
+            <div class="item-historial" [class.vigente]="s.esVigente">
+              <div class="item-historial-cabecera">
+                <span class="etiqueta-vigente" [class.activa]="s.esVigente">
+                  {{ s.esVigente ? 'SUSPENSIÓN VIGENTE' : s.activa ? 'Activa' : 'Finalizada / Levantada' }}
+                </span>
+                <span class="fecha-historial">{{ fechaHora(s.fechaCreacion) }}</span>
+              </div>
+              <p><strong>Motivo:</strong> {{ s.motivo }}</p>
+              <p><strong>Periodo:</strong> Desde {{ fechaHora(s.fechaInicio) }} hasta {{ fechaHora(s.fechaFin) }} ({{ s.dias }} días)</p>
+              @if (s.fechaLevantamiento) {
+                <p class="texto-levantado">
+                  <strong>Levantada el:</strong> {{ fechaHora(s.fechaLevantamiento) }}
+                  @if (s.observacionLevantamiento) {
+                    — {{ s.observacionLevantamiento }}
+                  }
+                </p>
+              }
+            </div>
+          } @empty {
+            <p class="ayuda">No tienes suspensiones registradas en tu historial.</p>
+          }
+        }
+
+        <div class="modal-botones">
+          <button class="btn btn-gris" (click)="cerrarMisSuspensiones()">Cerrar</button>
+        </div>
+      </div>
+    </div>
   }
 </div>

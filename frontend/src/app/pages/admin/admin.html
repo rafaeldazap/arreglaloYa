@@ -49,7 +49,7 @@
       <h2 class="subtitulo">Todos los trabajadores</h2>
       <div class="tabla-scroll">
         <table>
-          <thead><tr><th>Nombre</th><th>Especialidades</th><th>Zonas</th><th>Calificación</th><th>Estado</th></tr></thead>
+          <thead><tr><th>Nombre</th><th>Especialidades</th><th>Zonas</th><th>Calificación</th><th>Estado</th><th>Acciones</th></tr></thead>
           <tbody>
             @for (t of datos.trabajadores(); track t.id) {
               <tr>
@@ -57,12 +57,98 @@
                 <td>{{ t.especialidades.join(', ') }}</td>
                 <td>{{ t.zonas.join(', ') }}</td>
                 <td>{{ t.promedio || '—' }}</td>
-                <td><span [class]="'estado ' + t.estado">{{ t.estado === 'REVISION' ? 'En revisión' : t.estado === 'ACTIVO' ? 'Activo' : t.estado === 'SUSPENDIDO' ? 'Suspendido' : 'Bloqueado' }}</span></td>
+                <td>
+                  <span [class]="'estado ' + t.estado">{{ t.estado === 'REVISION' ? 'En revisión' : t.estado === 'ACTIVO' ? 'Activo' : t.estado === 'SUSPENDIDO' ? 'Suspendido' : 'Bloqueado' }}</span>
+                  @if (t.estado === 'SUSPENDIDO' && t.suspendidoHasta) {
+                    <div class="texto-suspendido">Hasta: {{ fechaHora(t.suspendidoHasta) }}</div>
+                  }
+                </td>
+                <td>
+                  <div class="acciones-tabla">
+                    @if (t.estado === 'ACTIVO') {
+                      <button class="btn btn-peligro chico" (click)="abrirSuspender(t)">Suspender</button>
+                    }
+                    @if (t.estado === 'SUSPENDIDO') {
+                      <button class="btn btn-exito chico" (click)="levantarSuspension(t)">Reactivar</button>
+                    }
+                    <button class="btn btn-gris chico" (click)="abrirHistorial(t)">Historial</button>
+                  </div>
+                </td>
               </tr>
             }
           </tbody>
         </table>
       </div>
+
+      @if (suspendiendo()) {
+        <div class="modal-fondo">
+          <div class="modal-caja">
+            <h3>Suspender a {{ suspendiendo()?.nombre }}</h3>
+            <p class="ayuda">Establece el motivo y el periodo de suspensión temporal. Durante este tiempo el trabajador no podrá enviar cotizaciones.</p>
+            
+            @if (errorSuspension()) {
+              <p class="error">{{ errorSuspension() }}</p>
+            }
+
+            <label for="motivo-suspension">Motivo de la suspensión *</label>
+            <textarea id="motivo-suspension" [(ngModel)]="motivoSuspension" rows="3" placeholder="Ej.: Incumplimiento de acuerdos o inasistencia reiterada."></textarea>
+
+            <label for="dias-suspension">Días de suspensión *</label>
+            <input id="dias-suspension" type="number" min="1" max="365" [(ngModel)]="diasSuspension" />
+
+            <div class="modal-botones">
+              <button class="btn btn-peligro" (click)="confirmarSuspender()">Aplicar Suspensión</button>
+              <button class="btn btn-gris" (click)="cancelarSuspender()">Cancelar</button>
+            </div>
+          </div>
+        </div>
+      }
+
+      @if (viendoHistorial()) {
+        <div class="modal-fondo">
+          <div class="modal-caja modal-ancho">
+            <div class="fila-titulo">
+              <h3>Historial de Suspensiones: {{ viendoHistorial()?.nombre }}</h3>
+              <button class="btn-cerrar" (click)="cerrarHistorial()">✕</button>
+            </div>
+
+            @if (cargandoHistorial()) {
+              <p class="ayuda">Cargando historial...</p>
+            } @else {
+              @for (s of historialSuspensiones(); track s.idSuspension) {
+                <div class="item-historial" [class.vigente]="s.esVigente">
+                  <div class="item-historial-cabecera">
+                    <span class="etiqueta-vigente" [class.activa]="s.esVigente">
+                      {{ s.esVigente ? 'SUSPENSIÓN VIGENTE' : s.activa ? 'Activa' : 'Finalizada / Levantada' }}
+                    </span>
+                    <span class="fecha-historial">{{ fechaHora(s.fechaCreacion) }}</span>
+                  </div>
+                  <p><strong>Motivo:</strong> {{ s.motivo }}</p>
+                  <p><strong>Periodo:</strong> Desde {{ fechaHora(s.fechaInicio) }} hasta {{ fechaHora(s.fechaFin) }} ({{ s.dias }} días)</p>
+                  <p class="ayuda">Aplicado por: {{ s.creadoPor || 'Administración' }}</p>
+                  @if (s.fechaLevantamiento) {
+                    <p class="texto-levantado">
+                      <strong>Levantada el:</strong> {{ fechaHora(s.fechaLevantamiento) }}
+                      @if (s.observacionLevantamiento) {
+                        — {{ s.observacionLevantamiento }}
+                      }
+                      @if (s.levantadoPor) {
+                        (por {{ s.levantadoPor }})
+                      }
+                    </p>
+                  }
+                </div>
+              } @empty {
+                <p class="ayuda">Este trabajador no tiene suspensiones registradas en su historial.</p>
+              }
+            }
+
+            <div class="modal-botones">
+              <button class="btn btn-gris" (click)="cerrarHistorial()">Cerrar</button>
+            </div>
+          </div>
+        </div>
+      }
     }
 
     @case ('catalogos') {

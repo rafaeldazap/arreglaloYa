@@ -12,6 +12,7 @@ import { Usuario } from './Usuario';
 import { Categoria } from './Categoria';
 import { Zona } from './Zona';
 import { HorarioAtencion } from './HorarioAtencion';
+import { SuspensionTrabajador } from './SuspensionTrabajador';
 
 @Entity('perfil_trabajador')
 export class PerfilTrabajador {
@@ -70,4 +71,7 @@ export class PerfilTrabajador {
 
   @OneToMany(() => HorarioAtencion, (horario) => horario.perfilTrabajador)
   horarios: HorarioAtencion[];
+
+  @OneToMany(() => SuspensionTrabajador, (suspension) => suspension.trabajador)
+  suspensiones: SuspensionTrabajador[];
 }

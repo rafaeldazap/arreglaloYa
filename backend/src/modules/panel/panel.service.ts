@@ -79,6 +79,7 @@ export class PanelService {
         idUsuario: p.usuario.idUsuario,
         nombreCompleto: p.usuario.nombreCompleto,
         estadoCuenta: p.usuario.estadoCuenta,
+        suspendidoHasta: p.usuario.suspendidoHasta,
         categorias: p.categorias.map((c) => c.nombre),
         zonas: p.zonas.map((z) => z.nombre),
         promedio,
