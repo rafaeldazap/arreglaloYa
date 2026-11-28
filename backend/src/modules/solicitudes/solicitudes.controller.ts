@@ -66,6 +66,12 @@ export class SolicitudesController {
     return this.solicitudesService.previsualizarCancelacion(id, usuario);
   }
 
+  @Get(':id/cancelacion')
+  @ApiOperation({ summary: 'Obtener el registro de cancelación de la solicitud (CU-10)' })
+  obtenerCancelacion(@Param('id', ParseIntPipe) id: number, @CurrentUser() usuario: Usuario) {
+    return this.solicitudesService.obtenerCancelacion(id, usuario);
+  }
+
   @Patch(':id/cancelar')
   @ApiOperation({ summary: 'Cancelar solicitud por el cliente aplicando regla del 25% (CU-10, RN-12)' })
   cancelar(

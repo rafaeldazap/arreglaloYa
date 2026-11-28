@@ -462,6 +462,32 @@ export class SolicitudesService {
     };
   }
 
+  // CU-10: Consultar el registro de cancelación guardado (cliente, trabajador asignado o ADMIN)
+  async obtenerCancelacion(idSolicitud: number, usuario: Usuario) {
+    const s = await this.solicitudRepo.findOne({
+      where: { idSolicitud },
+      relations: ['cliente', 'trabajador', 'trabajador.usuario'],
+    });
+    if (!s) throw new NotFoundException(`Solicitud #${idSolicitud} no encontrada`);
+
+    const esCliente = s.cliente?.idUsuario === usuario.idUsuario;
+    const esTrabajador = s.trabajador?.usuario?.idUsuario === usuario.idUsuario;
+    const esAdmin = usuario.rol === RolUsuario.ADMIN;
+    if (!esCliente && !esTrabajador && !esAdmin) {
+      throw new ForbiddenException('No tiene permisos para ver la cancelación de este pedido');
+    }
+
+    const cancelacion = await this.dataSource.manager.findOne(CancelacionSolicitud, {
+      where: { solicitud: { idSolicitud } },
+      relations: ['solicitud', 'usuario'],
+    });
+    if (!cancelacion) {
+      throw new NotFoundException(`La solicitud #${idSolicitud} no tiene una cancelación registrada`);
+    }
+
+    return sanitizeCancelacion(cancelacion);
+  }
+
   // CU-11, RN-08: Expirar solicitudes con más de 30 días sin concretarse
   async expirarSolicitudesVencidas() {
     const ahora = new Date();
